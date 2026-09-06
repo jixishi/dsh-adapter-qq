@@ -62,12 +62,11 @@ QQ 开放平台 (q.qq.com)
 ### 1. 准备 QQ 开放平台机器人凭证
 
 1. 前往 [QQ 开放平台官网](https://q.qq.com/) 注册并登录，创建机器人应用：
-   - ⚠️ **机器人类型务必选择「公域机器人」**（公域机器人支持单聊及群聊，私域机器人无法发送外部单聊/群聊消息，会报 `11255` 错误）。
+   - 个人开发者创建的**默认单聊机器人**即可直接使用，无需复杂配置。
 2. 在 **开发设置** 中获取：
    - `AppID`（机器人应用 ID）
    - `AppSecret`（开发者密钥）
-3. 在 **开发设置 -> 测试人员管理** 中添加自己的 QQ 号为测试人员。
-4. 如果尚未发布上线，请开启**沙箱环境** (`sandbox: true`) 进行测试。
+3. 机器人调试：若机器人尚未公开发布上线，建议开启**沙箱环境** (`sandbox: true`) 进行测试。
 
 ### 2. 安装插件到 DSH
 
@@ -80,10 +79,10 @@ pnpm install
 
 # 3. 软链接至 DSH Web Profile 的 node_modules
 # Windows PowerShell (管理员):
-New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.dsh\profiles\web\node_modules\dsh-plugin-adapter-qq" -Target "F:\dsh-plugin\qq-bot"
+New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.dsh\profiles\web\node_modules\dsh-adapter-qq" -Target "F:\dsh-plugin\qq-bot"
 
 # 或 Linux / macOS:
-# ln -s "$(pwd)" "$HOME/.dsh/profiles/web/node_modules/dsh-plugin-adapter-qq"
+# ln -s "$(pwd)" "$HOME/.dsh/profiles/web/node_modules/dsh-adapter-qq"
 ```
 
 在 `$env:USERPROFILE\.dsh\profiles\web\package.json` 中的 `dependencies` 与 `dsh.profile.bundles` 添加：
@@ -91,14 +90,14 @@ New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.dsh\profiles\web\node_m
 ```json
 {
   "dependencies": {
-    "dsh-plugin-adapter-qq": "file:./node_modules/dsh-plugin-adapter-qq"
+    "dsh-adapter-qq": "file:./node_modules/dsh-adapter-qq"
   },
   "dsh": {
     "profile": {
       "bundles": [
         "@deepseek-ai/dsh-base",
         "@deepseek-ai/dsh-web-app",
-        "dsh-plugin-adapter-qq"
+        "dsh-adapter-qq"
       ]
     }
   }
@@ -110,7 +109,7 @@ New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.dsh\profiles\web\node_m
 ```yaml
 - insert:
     - id: adapter-qq
-      name: dsh-plugin-adapter-qq
+      name: dsh-adapter-qq
 ```
 
 重启 DSH 服务即可自动加载。
@@ -189,7 +188,7 @@ New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.dsh\profiles\web\node_m
 
 ## 🧪 单元测试
 
-本项目内置完整的单元测试套件（覆盖 API 客户端、Gateway 网关协议、会话管理器、操作板构建器、审批流中间件与消息桥接器）：
+本项目内置完整的单元测试套件（覆盖 API 客户端、InlineKeyboard 构建器、会话管理器、Gateway 网关协议、审批流中间件与消息桥接器）：
 
 ```bash
 # 运行全部测试
@@ -199,14 +198,14 @@ pnpm test
 测试结果：
 ```text
 ✔ QQApiClient (7 tests passed)
-✔ KeyboardBuilder (7 tests passed)
-✔ SessionManager (5 tests passed)
+✔ KeyboardBuilder (9 tests passed)
+✔ SessionManager (7 tests passed)
 ✔ QQGatewayClient (6 tests passed)
 ✔ ApprovalHandler (2 tests passed)
-✔ MessageBridge (8 tests passed)
-ℹ tests 35
+✔ MessageBridge (11 tests passed)
+ℹ tests 42
 ℹ suites 6
-ℹ pass 35
+ℹ pass 42
 ℹ fail 0
 ```
 
@@ -215,9 +214,8 @@ pnpm test
 ## ❓ 常见问题排查 (Troubleshooting)
 
 1. **收到报错 `11255` 或发消息无响应？**
-   - 检查机器人是否为**公域机器人**。私域机器人无法主动发起私聊或群聊消息。
-   - 检查是否在 QQ 开放平台后台的 **开发设置 -> 测试人员管理** 中添加了当前测试 QQ 号。沙箱未配置测试人员会报 11255。
    - 检查 `sandbox` 配置是否与后台所处环境（测试沙箱 vs 正式）一致。
+   - 检查 AppID 与 AppSecret 是否填写正确。
 2. **提示 DNS 解析失败或连不上 `bots.qq.com`？**
    - 如果开启了代理软件（如 Clash、Shadowrocket TUN 模式等带有 fake-ip 功能），请确认 `bots.qq.com` 与 `*.qq.com` 直连，避免 fake-ip 解析异常拦截握手请求。
 3. **切换预设提示 `session has already started; its agent preset is fixed`？**
