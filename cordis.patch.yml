@@ -1,5 +1,5 @@
-# dsh-plugin-adapter-qq bundle patch
+# dsh-adapter-qq bundle patch
 # QQ Bot 适配器插件配置
 - insert:
     - id: adapter-qq
-      name: dsh-plugin-adapter-qq
+      name: dsh-adapter-qq

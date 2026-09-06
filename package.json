@@ -1,5 +1,5 @@
 {
-  "name": "dsh-plugin-adapter-qq",
+  "name": "dsh-adapter-qq",
   "version": "0.1.0",
   "description": "DeepSeek Harness QQ Bot Adapter - C2C Single Chat, Session Sync, Interactive Action Board & Custom Menu",
   "type": "module",
@@ -27,6 +27,19 @@
     "qq-bot",
     "adapter"
   ],
+  "author": "JiXieShi <lydxh935227514@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jixishi/dsh-adapter-qq.git"
+  },
+  "homepage": "https://github.com/jixishi/dsh-adapter-qq#readme",
+  "bugs": {
+    "url": "https://github.com/jixishi/dsh-adapter-qq/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "dependencies": {
     "ws": "^8.18.0"
   },
