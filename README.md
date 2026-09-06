@@ -68,25 +68,47 @@ QQ 开放平台 (q.qq.com)
    - `AppSecret`（开发者密钥）
 3. 机器人调试：若机器人尚未公开发布上线，建议开启**沙箱环境** (`sandbox: true`) 进行测试。
 
-### 2. 安装插件到 DSH
+## 🚀 安装与部署
 
+本插件是标准 DSH Bundle 插件包，声明了 `dsh.bundle.patch` 和 `dsh.client`，完全支持 DSH 官方推荐的 `dsh plugin` 命令进行管理：
+
+### 1. 使用官方 CLI 命令安装（推荐）
+
+#### 从 npm 安装（发布后）：
 ```bash
-# 1. 克隆或下载插件源码
-cd F:/dsh-plugin/qq-bot
+dsh plugin --profile web add dsh-adapter-qq
+```
 
-# 2. 安装依赖
+#### 从 GitHub 仓库安装：
+```bash
+dsh plugin --profile web add github:jixishi/dsh-adapter-qq
+```
+
+#### 从本地源码目录安装（本地开发）：
+```bash
+dsh plugin --profile web add F:/dsh-plugin/qq-bot
+```
+
+> **卸载插件**：
+> ```bash
+> dsh plugin --profile web remove dsh-adapter-qq
+> ```
+
+---
+
+### 2. 手动软链接安装（替代方式）
+
+如果希望保持源码随时热重载调试，可以使用软链接：
+```powershell
+# 1. 在当前插件目录安装依赖
+cd F:\dsh-plugin\qq-bot
 pnpm install
 
-# 3. 软链接至 DSH Web Profile 的 node_modules
-# Windows PowerShell (管理员):
+# 2. 软链接至 DSH Web Profile 的 node_modules
 New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.dsh\profiles\web\node_modules\dsh-adapter-qq" -Target "F:\dsh-plugin\qq-bot"
-
-# 或 Linux / macOS:
-# ln -s "$(pwd)" "$HOME/.dsh/profiles/web/node_modules/dsh-adapter-qq"
 ```
 
 在 `$env:USERPROFILE\.dsh\profiles\web\package.json` 中的 `dependencies` 与 `dsh.profile.bundles` 添加：
-
 ```json
 {
   "dependencies": {
@@ -104,19 +126,11 @@ New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.dsh\profiles\web\node_m
 }
 ```
 
-或者直接在 `$env:USERPROFILE\.dsh\profiles\web\cordis.patch.yml` 中追加：
-
-```yaml
-- insert:
-    - id: adapter-qq
-      name: dsh-adapter-qq
-```
-
-重启 DSH 服务即可自动加载。
+---
 
 ### 3. 在 DSH Web UI 中配置
 
-启动 DSH Web 界面（默认 `http://127.0.0.1:3080`），进入 **设置 (Settings)** 页面，找到 **`adapter-qq`** 分组：
+启动 DSH Web 界面（默认 `http://127.0.0.1:3080`），进入 **设置 (Settings)** 页面，找到 **【QQ 机器人 (QQ Bot)】** 卡片：
 
 | 配置项 | 说明 | 默认值 |
 | :--- | :--- | :--- |
@@ -125,10 +139,12 @@ New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.dsh\profiles\web\node_m
 | `clientSecret` | 填写 QQ 开放平台的 AppSecret（密文遮罩） | `""` |
 | `sandbox` | 是否连接沙箱开发环境（测试期间推荐勾选） | `false` |
 | `userOpenid` | 绑定的专属用户 OpenID（**留空将在收到首条消息时自动绑定**） | `""` |
-| `defaultCwd` | 新建会话的默认工作目录（留空使用当前 DSH 工作区） | `""` |
 | `defaultPreset` | 新建会话默认 Agent 预设 | `"standard"` |
+| `defaultCwd` | 新建会话默认工作目录（留空使用当前 DSH 工作区） | `""` |
 | `autoRegisterMenu` | 启动后自动向 QQ 开放平台注册底部自定义快捷菜单 | `true` |
 | `markdown` | 消息回复优先使用 Markdown 渲染 | `true` |
+| `syncToolCalls` | 是否同步推送工具调用执行进度（防刷屏，默认关闭） | `false` |
+| `toolCallAggregateWindowMs` | 工具调用聚合推送窗口时间（毫秒，默认 30000ms / 30秒） | `30000` |
 
 保存后，插件会立即热重载配置并自动建立 WebSocket 连接，无需重启 DSH。
 
