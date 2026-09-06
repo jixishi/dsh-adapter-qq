@@ -68,8 +68,8 @@ describe('KeyboardBuilder', () => {
 
   it('should generate new session workspace selection board with remote support', () => {
     const mockWorkspaces = [
-      { id: 'ws_local', title: 'qq-bot', path: 'F:/dsh-plugin/qq-bot', isRemote: false },
-      { id: 'ws_remote', title: '免费:~', path: 'C:/Users/lydxh/.dsh/remote-workspaces/123', isRemote: true },
+      { id: 'ws_local', title: 'qq-bot', path: '/workspaces/qq-bot', isRemote: false },
+      { id: 'ws_remote', title: '免费:~', path: '/remote-workspaces/123', isRemote: true },
     ];
     const kb = KeyboardBuilder.buildNewSessionWorkspacesBoard(mockWorkspaces);
     assert.ok(kb.content.rows.length >= 2);
@@ -87,7 +87,7 @@ describe('KeyboardBuilder', () => {
 
   it('should generate directory browser board with subdirs and pagination', () => {
     const kb = KeyboardBuilder.buildDirectoryBrowserBoard({
-      currentPath: 'F:/dsh-plugin',
+      currentPath: '/workspaces',
       subdirs: ['qq-bot', 'demo-app'],
       page: 1,
       totalPages: 2,

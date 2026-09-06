@@ -263,6 +263,34 @@ describe('MessageBridge', () => {
     harness.bridge.stop();
   });
 
+  it('should handle custom shortcut menu interaction (type 12) and ack immediately', async () => {
+    const harness = createTestHarness();
+
+    // Emulate type 12 callback from custom menu
+    harness.gateway.emit('interaction', {
+      id: 'interact_menu_12',
+      type: 12,
+      user_openid: 'user_target',
+      data: {
+        type: 12,
+        resolved: {
+          send_message: '/current',
+        },
+      },
+    });
+
+    await new Promise((r) => setTimeout(r, 10));
+
+    assert.equal(harness.ackedInteractions.length, 1);
+    assert.equal(harness.ackedInteractions[0].id, 'interact_menu_12');
+    assert.equal(harness.ackedInteractions[0].code, 0);
+
+    // And should have executed /current command
+    assert.equal(harness.sentMessages.length, 1);
+    assert.ok(harness.sentMessages[0].msg.markdown.includes('当前活跃会话详情'));
+    harness.bridge.stop();
+  });
+
   it('should handle /switch by index or session ID', async () => {
     const harness = createTestHarness();
 

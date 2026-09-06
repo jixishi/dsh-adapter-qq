@@ -70,23 +70,18 @@ QQ 开放平台 (q.qq.com)
 
 ## 🚀 安装与部署
 
-本插件是标准 DSH Bundle 插件包，声明了 `dsh.bundle.patch` 和 `dsh.client`，完全支持 DSH 官方推荐的 `dsh plugin` 命令进行管理：
+本插件是标准 DSH Bundle 插件包，声明了 `dsh.bundle.patch` 和 `dsh.client`，通过 DSH 官方 CLI 命令一行即可完成安装与自动挂载：
 
-### 1. 使用官方 CLI 命令安装（推荐）
+### 1. 安装插件
 
-#### 从 npm 安装（发布后）：
+#### 从 npm 官方源安装（推荐）：
 ```bash
 dsh plugin --profile web add dsh-adapter-qq
 ```
 
-#### 从 GitHub 仓库安装：
+#### 或从 GitHub 仓库安装：
 ```bash
 dsh plugin --profile web add github:jixishi/dsh-adapter-qq
-```
-
-#### 从本地源码目录安装（本地开发）：
-```bash
-dsh plugin --profile web add F:/dsh-plugin/qq-bot
 ```
 
 > **卸载插件**：
@@ -96,41 +91,9 @@ dsh plugin --profile web add F:/dsh-plugin/qq-bot
 
 ---
 
-### 2. 手动软链接安装（替代方式）
+### 2. 在 DSH Web UI 中配置
 
-如果希望保持源码随时热重载调试，可以使用软链接：
-```powershell
-# 1. 在当前插件目录安装依赖
-cd F:\dsh-plugin\qq-bot
-pnpm install
-
-# 2. 软链接至 DSH Web Profile 的 node_modules
-New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.dsh\profiles\web\node_modules\dsh-adapter-qq" -Target "F:\dsh-plugin\qq-bot"
-```
-
-在 `$env:USERPROFILE\.dsh\profiles\web\package.json` 中的 `dependencies` 与 `dsh.profile.bundles` 添加：
-```json
-{
-  "dependencies": {
-    "dsh-adapter-qq": "file:./node_modules/dsh-adapter-qq"
-  },
-  "dsh": {
-    "profile": {
-      "bundles": [
-        "@deepseek-ai/dsh-base",
-        "@deepseek-ai/dsh-web-app",
-        "dsh-adapter-qq"
-      ]
-    }
-  }
-}
-```
-
----
-
-### 3. 在 DSH Web UI 中配置
-
-启动 DSH Web 界面（默认 `http://127.0.0.1:3080`），进入 **设置 (Settings)** 页面，找到 **【QQ 机器人 (QQ Bot)】** 卡片：
+安装完成后，启动 DSH Web 界面（默认 `http://127.0.0.1:3080`），进入 **设置 (Settings)** 页面，展开 **【QQ 机器人 (QQ Bot)】** 卡片：
 
 | 配置项 | 说明 | 默认值 |
 | :--- | :--- | :--- |
