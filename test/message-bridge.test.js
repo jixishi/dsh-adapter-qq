@@ -544,7 +544,7 @@ describe('MessageBridge', () => {
         ],
       });
 
-      await new Promise((r) => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 60));
 
       assert.ok(admittedContent);
       // First part is text annotation with file previews

@@ -43,6 +43,16 @@
 | <img src="docs/images/approval-sync.png" width="360" alt="双向权限审批" /> | <img src="docs/images/tool-execution.png" width="360" alt="工具调用执行" /> |
 | **QQ 与 Web UI 实时互斥结算，绝不悬挂** | **工具执行进度秒级感知，多操作自动聚合防刷屏** |
 
+| 5. 会话统计数据 (`/stats` 对齐 WebUI) | 6. 模型选择与切换 (`/model` 操作板) |
+| :---: | :---: |
+| <img src="docs/images/mobile-stats.jpg" width="360" alt="会话统计数据" /> | <img src="docs/images/mobile-model.jpg" width="360" alt="模型切换操作板" /> |
+| **轮次、步数、LLM耗时、TTFT及缓存命中率** | **列出可用模型，支持一键切换并设为默认** |
+
+| 7. QQ 图片/文件同步至 Web UI 对话流 |
+| :---: |
+| <img src="docs/images/web-sync-image.png" width="560" alt="QQ 图片同步至 Web UI" /> |
+| **从 QQ 发送的图片和文件原生呈现在 Web UI 聊天气泡，并自动保存在工作区 uploads/ 目录** |
+
 ---
 
 ## 📋 架构设计
