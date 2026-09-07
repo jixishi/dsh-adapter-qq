@@ -48,10 +48,10 @@
 | <img src="docs/images/mobile-stats.jpg" width="360" alt="会话统计数据" /> | <img src="docs/images/mobile-model.jpg" width="360" alt="模型切换操作板" /> |
 | **轮次、步数、LLM耗时、TTFT及缓存命中率** | **列出可用模型，支持一键切换并设为默认** |
 
-| 7. QQ 图片/文件同步至 Web UI 对话流 |
-| :---: |
-| <img src="docs/images/web-sync-image.png" width="560" alt="QQ 图片同步至 Web UI" /> |
-| **从 QQ 发送的图片和文件原生呈现在 Web UI 聊天气泡，并自动保存在工作区 uploads/ 目录** |
+| 7. QQ 图片同步至 Web UI 聊天气泡 | 8. QQ 文件接收并保存至工作区 |
+| :---: | :---: |
+| <img src="docs/images/web-sync-image.png" width="360" alt="QQ 图片同步至 Web UI" /> | <img src="docs/images/web-sync-file.png" width="360" alt="QQ 文件接收保存" /> |
+| **QQ 发送图片原生呈现在 Web UI 聊天流** | **QQ 发送文件自动保存至 uploads/ 并通知 Agent** |
 
 ---
 
