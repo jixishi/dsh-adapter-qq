@@ -131,10 +131,13 @@ dsh plugin --profile web add github:jixishi/dsh-adapter-qq
 2. **目录选择与浏览 (第 2 步)**：支持按键深入子目录、`⬆️ 上级目录`、`➕ 新建目录`、`📄 上页/下页` 翻页。
 3. **完成创建**：点击【✅ 选定当前目录创建】，即可完成会话创建并自动绑定为活跃会话！
 
-### 2. 预设与权限指令
+### 2. 预设、模型与权限指令
 
 | 指令 | 说明 |
 | :--- | :--- |
+| `/model` | 查看当前会话模型及所有可用模型列表，附带一键切换操作板 |
+| `/model <名称或序号>` | 为当前会话切换 AI 模型（如 `/model gpt-5.6-luna` 或 `/model 2`） |
+| `/stats` 或 `/统计` | 查看当前会话统计信息（轮次/步数、LLM耗时、首字延迟、解码速度、缓存命中率、Token用量，对齐 WebUI 底栏） |
 | `/preset` | 显示当前预设及所有动态获取的可用预设列表（内置 + 自定义），附带切换按钮 |
 | `/preset <名称>` | 为当前会话切换预设（如 `/preset ptc`，未产生交互前可换） |
 | `/permission` | 显示当前权限级别及切换操作板 |
@@ -181,10 +184,10 @@ pnpm test
 ✔ SessionManager (7 tests passed)
 ✔ QQGatewayClient (6 tests passed)
 ✔ ApprovalHandler (2 tests passed)
-✔ MessageBridge (11 tests passed)
-ℹ tests 42
+✔ MessageBridge (15 tests passed)
+ℹ tests 46
 ℹ suites 6
-ℹ pass 42
+ℹ pass 46
 ℹ fail 0
 ```
 

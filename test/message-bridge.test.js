@@ -92,6 +92,38 @@ describe('MessageBridge', () => {
         permission: 'workspace-write',
         running: false,
       }),
+      getModelCatalog: async () => ({
+        current: { provider: 'cpa', model: 'gemini-3.8-flash' },
+        providers: [{ provider: 'cpa', displayName: 'CPA' }],
+        models: [
+          { id: 'gemini-3.8-flash', name: 'Gemini Flash', provider: 'cpa', providerName: 'CPA' },
+          { id: 'gpt-5.6-luna', name: 'GPT Luna', provider: 'cpa', providerName: 'CPA' },
+        ],
+      }),
+      switchModel: async (model) => ({ provider: 'cpa', model }),
+      getSessionStats: async () => ({
+        sessionId: activeSession,
+        title: '开发需求单',
+        stats: {
+          turns: 12,
+          steps: 45,
+          llmMs: 65000,
+          toolMs: 12000,
+          ttftMs: 25000,
+          ttftSteps: 40,
+          decodeMs: 40000,
+          decodeTokens: 6000,
+        },
+        tokenUsage: {
+          totals: {
+            uncachedInputTokens: 50000,
+            outputTokens: 6000,
+            cacheReadTokens: 450000,
+            cacheWriteTokens: 0,
+          },
+        },
+        modelSelection: { provider: 'cpa', model: 'gemini-3.8-flash' },
+      }),
       createSession: async ({ cwd, preset, workspaceId }) => {
         activeSession = 'sess-new';
         return { sessionId: 'sess-new', cwd, agentPreset: preset || 'standard', workspaceId };
@@ -376,6 +408,93 @@ describe('MessageBridge', () => {
 
     // Should be filtered out completely
     assert.equal(harness.sentMessages.length, 0);
+    harness.bridge.stop();
+  });
+
+  it('should cleanly extract human text when MNEMON memory snapshot is prepended to prompt', async () => {
+    const harness = createTestHarness();
+
+    // User prompt from Web UI prepended with MNEMON snapshot
+    const hybridContent = [
+      'MNEMON RUNTIME MEMORY SNAPSHOT',
+      'Revision: 8bcae181d21321b79e1cee4976a6c9759a0f03769dde64b6f821ab5d22a33921',
+      'Contents of USER.md',
+      '(empty)',
+      '</runtime-memory-file>',
+      'MNEMON VIEW TOOLS (available in this View): mnemon_document_search',
+      '',
+      '而且机器人显示离线状态',
+    ].join('\n');
+
+    harness.ctx.emit('session/event', { id: 'sess-1' }, {
+      type: 'user/message',
+      data: {
+        message: {
+          content: [{ type: 'text', text: hybridContent }],
+          source: { kind: 'user', rpcId: 'web_user_msg_123' },
+        },
+      },
+    });
+
+    await new Promise((r) => setTimeout(r, 10));
+
+    assert.equal(harness.sentMessages.length, 1);
+    const last = harness.sentMessages[0];
+    assert.ok(last.msg.markdown.includes('Web UI 提问同步'));
+    assert.ok(last.msg.markdown.includes('而且机器人显示离线状态'));
+    assert.ok(!last.msg.markdown.includes('MNEMON RUNTIME MEMORY SNAPSHOT'));
+    harness.bridge.stop();
+  });
+
+  it('should handle /stats command and show execution, tokens and cache metrics', async () => {
+    const harness = createTestHarness();
+
+    harness.gateway.emit('c2c_message', {
+      id: 'msg_stats',
+      author: { user_openid: 'user_target' },
+      content: '/stats',
+    });
+
+    await new Promise((r) => setTimeout(r, 10));
+
+    assert.equal(harness.sentMessages.length, 1);
+    const last = harness.sentMessages[0];
+    assert.ok(last.msg.markdown.includes('DSH 会话统计信息'));
+    assert.ok(last.msg.markdown.includes('12')); // turns
+    assert.ok(last.msg.markdown.includes('45')); // steps
+    assert.ok(last.msg.markdown.includes('缓存命中率'));
+    assert.ok(last.msg.keyboard);
+    harness.bridge.stop();
+  });
+
+  it('should handle /model command to view and switch models', async () => {
+    const harness = createTestHarness();
+
+    // 1. View models
+    harness.gateway.emit('c2c_message', {
+      id: 'msg_mod_view',
+      author: { user_openid: 'user_target' },
+      content: '/model',
+    });
+
+    await new Promise((r) => setTimeout(r, 10));
+
+    assert.equal(harness.sentMessages.length, 1);
+    assert.ok(harness.sentMessages[0].msg.markdown.includes('DSH 模型管理与切换'));
+    assert.ok(harness.sentMessages[0].msg.keyboard);
+
+    // 2. Switch model
+    harness.gateway.emit('c2c_message', {
+      id: 'msg_mod_sw',
+      author: { user_openid: 'user_target' },
+      content: '/model gpt-5.6-luna',
+    });
+
+    await new Promise((r) => setTimeout(r, 10));
+
+    assert.equal(harness.sentMessages.length, 2);
+    assert.ok(harness.sentMessages[1].msg.markdown.includes('模型切换成功'));
+    assert.ok(harness.sentMessages[1].msg.markdown.includes('gpt-5.6-luna'));
     harness.bridge.stop();
   });
 
