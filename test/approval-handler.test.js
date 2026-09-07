@@ -129,4 +129,81 @@ describe('ApprovalHandler', () => {
 
     handler.stop();
   });
+
+  it('should intercept user-questions/request and resolve via QQ option selection', async () => {
+    let questionListener = null;
+    const mockCtx = {
+      on: (event, handler) => {
+        if (event === 'user-questions/request') {
+          questionListener = handler;
+        }
+        return () => {};
+      },
+    };
+
+    let sentMessage = null;
+    const mockApiClient = {
+      sendC2CMessage: async (openid, msg) => {
+        sentMessage = { openid, msg };
+        return { id: 'msg_q_1' };
+      },
+    };
+
+    const mockSessionManager = {
+      getActiveSessionId: async () => 'sess_active_123',
+    };
+
+    const handler = new ApprovalHandler({
+      ctx: mockCtx,
+      apiClient: mockApiClient,
+      sessionManager: mockSessionManager,
+      getUserOpenid: () => 'user_target_openid',
+    });
+
+    handler.start();
+    assert.ok(questionListener !== null, 'Question listener must be registered');
+
+    const mockReq = {
+      agent: {
+        session: { id: 'sess_active_123', header: { title: 'Active Session' } },
+      },
+      questions: [
+        {
+          id: 'q1',
+          header: '确认选择',
+          question: '请问你要选择哪种方案？',
+          options: [
+            { label: '方案 A', description: '快速方案' },
+            { label: '方案 B', description: '稳健方案' },
+          ],
+        },
+      ],
+    };
+
+    const questionPromise = questionListener(mockReq, async () => {
+      return new Promise(() => {});
+    });
+
+    await new Promise((r) => setTimeout(r, 10));
+
+    assert.ok(sentMessage);
+    assert.ok(sentMessage.msg.markdown.includes('请问你要选择哪种方案？'));
+    assert.ok(sentMessage.msg.keyboard);
+
+    // Answer from QQ
+    const handled = handler.handleQuestionAnswer('q1', '方案 A');
+    assert.equal(handled, true);
+
+    const res = await questionPromise;
+    assert.deepEqual(res, {
+      answers: [
+        {
+          id: 'q1',
+          selected: ['方案 A'],
+        },
+      ],
+    });
+
+    handler.stop();
+  });
 });
