@@ -1,6 +1,6 @@
 {
   "name": "dsh-adapter-qq",
-  "version": "0.1.2",
+  "version": "0.1.0",
   "description": "DeepSeek Harness QQ Bot Adapter - C2C Single Chat, Session Sync, Interactive Action Board & Custom Menu",
   "type": "module",
   "main": "lib/index.js",
