@@ -31,6 +31,20 @@
 
 ---
 
+## 📸 运行效果展示 (Showcase)
+
+| 1. 工作区与会话列表 (`/sessions`) | 2. Agent 交互提问 (`ask_user_question`) |
+| :---: | :---: |
+| <img src="docs/images/workspace-sessions.png" width="360" alt="工作区与会话列表" /> | <img src="docs/images/user-question.png" width="360" alt="Agent 交互提问" /> |
+| **层级化对齐 DSH 侧边栏，支持按键一键切换** | **紧凑 A/B/C/D 操作板，点击即回传 Agent** |
+
+| 3. 双向权限审批联动 (`/approve` / `/reject`) | 4. 实时工具调用执行进度 (可选聚合) |
+| :---: | :---: |
+| <img src="docs/images/approval-sync.png" width="360" alt="双向权限审批" /> | <img src="docs/images/tool-execution.png" width="360" alt="工具调用执行" /> |
+| **QQ 与 Web UI 实时互斥结算，绝不悬挂** | **工具执行进度秒级感知，多操作自动聚合防刷屏** |
+
+---
+
 ## 📋 架构设计
 
 ```

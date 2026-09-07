@@ -498,6 +498,73 @@ describe('MessageBridge', () => {
     harness.bridge.stop();
   });
 
+  it('should process image and file attachments from QQ and pass to DSH prompt', async () => {
+    const harness = createTestHarness();
+
+    let admittedContent = null;
+    harness.ctx.sessionController.prompt = async (req) => {
+      admittedContent = req.content;
+      return { accepted: true };
+    };
+
+    // Mock global fetch for downloading image/file from QQ CDN
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async (url) => {
+      if (url.includes('example.com/test.png')) {
+        return {
+          ok: true,
+          arrayBuffer: async () => Buffer.from('FAKE_PNG_BYTES'),
+        };
+      }
+      if (url.includes('example.com/readme.txt')) {
+        return {
+          ok: true,
+          arrayBuffer: async () => Buffer.from('Hello from QQ text file!'),
+        };
+      }
+      return originalFetch(url);
+    };
+
+    try {
+      harness.gateway.emit('c2c_message', {
+        id: 'msg_media',
+        author: { user_openid: 'user_target' },
+        content: '请分析这张图和文件',
+        attachments: [
+          {
+            content_type: 'image/png',
+            filename: 'test.png',
+            url: 'https://example.com/test.png',
+          },
+          {
+            content_type: 'text/plain',
+            filename: 'readme.txt',
+            url: 'https://example.com/readme.txt',
+          },
+        ],
+      });
+
+      await new Promise((r) => setTimeout(r, 20));
+
+      assert.ok(admittedContent);
+      // First part is text annotation with file previews
+      const textPart = admittedContent.find((p) => p.type === 'text');
+      assert.ok(textPart);
+      assert.ok(textPart.text.includes('请分析这张图和文件'));
+      assert.ok(textPart.text.includes('test.png'));
+      assert.ok(textPart.text.includes('Hello from QQ text file!'));
+
+      // Second part is the image part
+      const imgPart = admittedContent.find((p) => p.type === 'image');
+      assert.ok(imgPart);
+      assert.equal(imgPart.mediaType, 'image/png');
+      assert.equal(imgPart.data, Buffer.from('FAKE_PNG_BYTES').toString('base64'));
+    } finally {
+      globalThis.fetch = originalFetch;
+      harness.bridge.stop();
+    }
+  });
+
   it('should push assistant response from active session to QQ', async () => {
     const harness = createTestHarness();
 
