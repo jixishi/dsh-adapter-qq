@@ -37,6 +37,7 @@ describe('MessageBridge', () => {
         ackedInteractions.push({ id, code });
         return true;
       },
+      recallC2CMessage: async () => true,
     };
 
     const mockGateway = new EventEmitter();
@@ -414,6 +415,7 @@ describe('MessageBridge', () => {
 
   it('should cleanly extract human text when MNEMON memory snapshot is prepended to prompt', async () => {
     const harness = createTestHarness();
+    harness.getConfig().syncWebQuestions = true;
 
     // User prompt from Web UI prepended with MNEMON snapshot
     const hybridContent = [
@@ -437,7 +439,7 @@ describe('MessageBridge', () => {
       },
     });
 
-    await new Promise((r) => setTimeout(r, 10));
+    await new Promise((r) => setTimeout(r, 30));
 
     assert.equal(harness.sentMessages.length, 1);
     const last = harness.sentMessages[0];
@@ -456,7 +458,7 @@ describe('MessageBridge', () => {
       content: '/stats',
     });
 
-    await new Promise((r) => setTimeout(r, 10));
+    await new Promise((r) => setTimeout(r, 30));
 
     assert.equal(harness.sentMessages.length, 1);
     const last = harness.sentMessages[0];
@@ -478,7 +480,7 @@ describe('MessageBridge', () => {
       content: '/model',
     });
 
-    await new Promise((r) => setTimeout(r, 10));
+    await new Promise((r) => setTimeout(r, 30));
 
     assert.equal(harness.sentMessages.length, 1);
     assert.ok(harness.sentMessages[0].msg.markdown.includes('DSH 模型管理与切换'));
@@ -491,7 +493,7 @@ describe('MessageBridge', () => {
       content: '/model gpt-5.6-luna',
     });
 
-    await new Promise((r) => setTimeout(r, 10));
+    await new Promise((r) => setTimeout(r, 30));
 
     assert.equal(harness.sentMessages.length, 2);
     assert.ok(harness.sentMessages[1].msg.markdown.includes('模型切换成功'));
