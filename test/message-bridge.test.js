@@ -101,6 +101,7 @@ describe('MessageBridge', () => {
         ],
       }),
       switchModel: async (model) => ({ provider: 'cpa', model }),
+      switchReasoningEffort: async (effort) => ({ provider: 'cpa', model: 'gemini-3.8-flash', reasoningEffort: effort }),
       getSessionStats: async () => ({
         sessionId: activeSession,
         title: '开发需求单',
@@ -495,6 +496,37 @@ describe('MessageBridge', () => {
     assert.equal(harness.sentMessages.length, 2);
     assert.ok(harness.sentMessages[1].msg.markdown.includes('模型切换成功'));
     assert.ok(harness.sentMessages[1].msg.markdown.includes('gpt-5.6-luna'));
+    harness.bridge.stop();
+  });
+
+  it('should handle /effort command to view and switch reasoning effort', async () => {
+    const harness = createTestHarness();
+
+    // 1. View effort
+    harness.gateway.emit('c2c_message', {
+      id: 'msg_eff_view',
+      author: { user_openid: 'user_target' },
+      content: '/effort',
+    });
+
+    await new Promise((r) => setTimeout(r, 10));
+
+    assert.equal(harness.sentMessages.length, 1);
+    assert.ok(harness.sentMessages[0].msg.markdown.includes('模型思考等级管理'));
+    assert.ok(harness.sentMessages[0].msg.keyboard);
+
+    // 2. Switch effort
+    harness.gateway.emit('c2c_message', {
+      id: 'msg_eff_sw',
+      author: { user_openid: 'user_target' },
+      content: '/effort high',
+    });
+
+    await new Promise((r) => setTimeout(r, 10));
+
+    assert.equal(harness.sentMessages.length, 2);
+    assert.ok(harness.sentMessages[1].msg.markdown.includes('思考等级已切换为'));
+    assert.ok(harness.sentMessages[1].msg.markdown.includes('high'));
     harness.bridge.stop();
   });
 

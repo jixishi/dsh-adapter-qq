@@ -160,7 +160,8 @@ dsh plugin --profile web add github:jixishi/dsh-adapter-qq
 | 指令 | 说明 |
 | :--- | :--- |
 | `/model` | 查看当前会话模型及所有可用模型列表，附带一键切换操作板 |
-| `/model <名称或序号>` | 为当前会话切换 AI 模型（如 `/model gpt-5.6-luna` 或 `/model 2`） |
+| `/model <名称或序号> [供应商]` | 为当前会话切换 AI 模型（如 `/model gpt-5.6-luna` 或 `/model 2`） |
+| `/effort [等级]` 或 `/思考` | 查看或切换思考等级（`off`, `low`, `medium`, `high`, `xhigh`, `max`），附带操作板 |
 | `/stats` 或 `/统计` | 查看当前会话统计信息（轮次/步数、LLM耗时、首字延迟、解码速度、缓存命中率、Token用量，对齐 WebUI 底栏） |
 | `/preset` | 显示当前预设及所有动态获取的可用预设列表（内置 + 自定义），附带切换按钮 |
 | `/preset <名称>` | 为当前会话切换预设（如 `/preset ptc`，未产生交互前可换） |
@@ -205,13 +206,13 @@ pnpm test
 ```text
 ✔ QQApiClient (7 tests passed)
 ✔ KeyboardBuilder (9 tests passed)
-✔ SessionManager (7 tests passed)
+✔ SessionManager (9 tests passed)
 ✔ QQGatewayClient (6 tests passed)
-✔ ApprovalHandler (2 tests passed)
-✔ MessageBridge (15 tests passed)
-ℹ tests 46
+✔ ApprovalHandler (3 tests passed)
+✔ MessageBridge (17 tests passed)
+ℹ tests 51
 ℹ suites 6
-ℹ pass 46
+ℹ pass 51
 ℹ fail 0
 ```
 

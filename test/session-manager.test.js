@@ -202,6 +202,72 @@ describe('SessionManager', () => {
     }
   });
 
+  it('should include forked/seeded sessions while filtering true subagents', async () => {
+    const mockCtx = {
+      sessionController: {
+        list: async () => ({
+          items: [
+            { sessionId: 's_main', title: '主会话', cwd: '/repo', updatedAt: 3000 },
+            { sessionId: 's_fork', title: '主会话 (1)', cwd: '/repo', isSeeded: true, parentSessionId: 's_main', updatedAt: 2000 },
+            { sessionId: 's_subagent', title: '子任务', cwd: '/repo', origin: 'subagent', updatedAt: 1000 },
+          ],
+        }),
+      },
+      sessions: {
+        get: (id) => ({ id, header: { title: id } }),
+      },
+    };
+
+    const manager = new SessionManager({ ctx: mockCtx });
+    const list = await manager.listSessions();
+
+    const ids = list.map((s) => s.sessionId);
+    assert.ok(ids.includes('s_main'), 'Should include main session');
+    assert.ok(ids.includes('s_fork'), 'Should include forked session');
+    assert.ok(!ids.includes('s_subagent'), 'Should exclude true subagent');
+  });
+
+  it('should get multi-provider model catalog and switch reasoning effort', async () => {
+    let lastSelected = null;
+    const mockCtx = {
+      sessionController: {
+        modelCatalog: async () => ({
+          default: { provider: 'cpa', model: 'gemini-3.8-flash', reasoningEffort: 'high' },
+          groups: [
+            {
+              id: 'cpa',
+              name: 'CPA',
+              models: [{ id: 'gemini-3.8-flash', name: 'Gemini Flash' }, { id: 'gpt-5.6-luna', name: 'GPT Luna' }],
+            },
+            {
+              id: 'satrss',
+              name: 'Starss Api',
+              models: [{ id: 'gpt-5.6-luna', name: 'GPT Luna' }, { id: 'grok-4.6', name: 'Grok' }],
+            },
+          ],
+        }),
+        selectModel: async (req) => {
+          lastSelected = req;
+          return { selected: { provider: req.provider, model: req.model, reasoningEffort: req.reasoningEffort } };
+        },
+      },
+    };
+
+    const manager = new SessionManager({ ctx: mockCtx });
+    manager.cachedActiveSessionId = 'active_test';
+
+    const cat = await manager.getModelCatalog();
+    assert.equal(cat.models.length, 4);
+    assert.equal(cat.models[0].provider, 'cpa');
+    assert.equal(cat.models[2].provider, 'satrss');
+
+    // Test switchReasoningEffort
+    const effRes = await manager.switchReasoningEffort('low');
+    assert.equal(effRes.reasoningEffort, 'low');
+    assert.equal(lastSelected.reasoningEffort, 'low');
+    assert.equal(lastSelected.model, 'gemini-3.8-flash');
+  });
+
   it('should create new session via sessionController.create', async () => {
     let createdRequest = null;
     const mockCtx = {
