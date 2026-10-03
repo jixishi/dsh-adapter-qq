@@ -1,7 +1,26 @@
-import { describe, it } from 'node:test';
+import { describe, it, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { readFileSync, rmSync } from 'node:fs';
 import { MessageBridge } from '../lib/sync/message-bridge.js';
+
+/**
+ * Fixture workspace for the mocked session. It has to be a real absolute path on
+ * the host, because the attachment case exercises the bridge's real save path
+ * (`join(sessionCwd, 'uploads')`): a Windows-style literal such as
+ * `F:/dsh-plugin/qq-bot` is *relative* on POSIX, so that case used to create a
+ * literal `F:` directory inside the repository root. A `tmpdir()`-based path is
+ * absolute on every platform and is removed again after this file's tests.
+ */
+const FIXTURE_ROOT = join(tmpdir(), `dsh_qq_bridge_${Date.now()}`);
+const FIXTURE_CWD = join(FIXTURE_ROOT, 'qq-bot');
+const FIXTURE_REMOTE = join(FIXTURE_ROOT, 'remote-workspaces', '1');
+
+after(() => {
+  rmSync(FIXTURE_ROOT, { recursive: true, force: true });
+});
 
 describe('MessageBridge', () => {
   function createTestHarness() {
@@ -14,7 +33,7 @@ describe('MessageBridge', () => {
       },
       list: async () => ({
         items: [
-          { sessionId: 'sess-1', title: '开发需求单', cwd: 'F:/dsh-plugin/qq-bot', agentPreset: 'standard', running: false, updatedAt: 1000 },
+          { sessionId: 'sess-1', title: '开发需求单', cwd: FIXTURE_CWD, agentPreset: 'standard', running: false, updatedAt: 1000 },
         ],
       }),
       cancel: async () => true,
@@ -44,8 +63,8 @@ describe('MessageBridge', () => {
 
     let activeSession = 'sess-1';
     const mockWorkspaces = [
-      { id: 'ws-1', title: 'qq-bot', path: 'F:/dsh-plugin/qq-bot', isRemote: false, sessionIds: ['sess-1'] },
-      { id: 'ws-remote', title: '免费:~', path: 'C:/Users/lydxh/.dsh/remote-workspaces/1', isRemote: true, sessionIds: [] },
+      { id: 'ws-1', title: 'qq-bot', path: FIXTURE_CWD, isRemote: false, sessionIds: ['sess-1'] },
+      { id: 'ws-remote', title: '免费:~', path: FIXTURE_REMOTE, isRemote: true, sessionIds: [] },
     ];
 
     const mockSessionManager = {
@@ -55,7 +74,7 @@ describe('MessageBridge', () => {
         return true;
       },
       listSessions: async () => [
-        { sessionId: 'sess-1', title: '开发需求单', cwd: 'F:/dsh-plugin/qq-bot', agentPreset: 'standard', running: false, index: 1 },
+        { sessionId: 'sess-1', title: '开发需求单', cwd: FIXTURE_CWD, agentPreset: 'standard', running: false, index: 1 },
       ],
       listWorkspaces: async () => mockWorkspaces,
       listSessionsGroupedByWorkspace: async () => ({
@@ -63,7 +82,7 @@ describe('MessageBridge', () => {
           {
             workspace: mockWorkspaces[0],
             sessions: [
-              { sessionId: 'sess-1', title: '开发需求单', cwd: 'F:/dsh-plugin/qq-bot', agentPreset: 'standard', running: false, index: 1 },
+              { sessionId: 'sess-1', title: '开发需求单', cwd: FIXTURE_CWD, agentPreset: 'standard', running: false, index: 1 },
             ],
           },
           {
@@ -72,23 +91,23 @@ describe('MessageBridge', () => {
           },
         ],
         allSessions: [
-          { sessionId: 'sess-1', title: '开发需求单', cwd: 'F:/dsh-plugin/qq-bot', agentPreset: 'standard', running: false, index: 1 },
+          { sessionId: 'sess-1', title: '开发需求单', cwd: FIXTURE_CWD, agentPreset: 'standard', running: false, index: 1 },
         ],
       }),
       browseDirectory: async (dirPath, page = 1) => ({
-        currentPath: dirPath || 'F:/dsh-plugin',
+        currentPath: dirPath || FIXTURE_ROOT,
         subdirs: ['qq-bot', 'sub-folder'],
         allSubdirsCount: 2,
         page,
         totalPages: 1,
         canGoUp: true,
-        parentPath: 'F:/',
+        parentPath: tmpdir(),
       }),
       createDirectory: async (parent, name) => `${parent}/${name}`,
       getActiveSessionInfo: async () => ({
         sessionId: activeSession,
         title: '开发需求单',
-        cwd: 'F:/dsh-plugin/qq-bot',
+        cwd: FIXTURE_CWD,
         agentPreset: 'standard',
         permission: 'workspace-write',
         running: false,
@@ -593,6 +612,12 @@ describe('MessageBridge', () => {
       assert.ok(imgPart);
       assert.equal(imgPart.mediaType, 'image/png');
       assert.equal(imgPart.data, Buffer.from('FAKE_PNG_BYTES').toString('base64'));
+
+      // Both attachments were written under the session cwd's uploads/, i.e. the
+      // fixture's absolute path — never a relative Windows-style literal.
+      const uploads = join(FIXTURE_CWD, 'uploads');
+      assert.equal(readFileSync(join(uploads, 'test.png'), 'utf8'), 'FAKE_PNG_BYTES');
+      assert.equal(readFileSync(join(uploads, 'readme.txt'), 'utf8'), 'Hello from QQ text file!');
     } finally {
       globalThis.fetch = originalFetch;
       harness.bridge.stop();
