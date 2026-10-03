@@ -294,4 +294,62 @@ describe('SessionManager', () => {
     assert.equal(createdRequest.agentPreset, 'ptc');
     assert.equal(await manager.getActiveSessionId(), 'test-created-session');
   });
+
+  it('should read the inbox projection and mutate queued items', async () => {
+    const inbox = {
+      'next-turn': [
+        { id: 'item_a', content: [{ type: 'text', text: '排队一' }], source: { kind: 'user' } },
+      ],
+      'next-step': [
+        { id: 'item_s', content: [{ type: 'text', text: '插话中' }], source: { kind: 'user' } },
+      ],
+    };
+    const updates = [];
+    const mockCtx = {
+      sessions: { get: (id) => (id === 'sess-1' ? { id } : undefined) },
+      sessionProjections: { stateOf: (session, key) => (key === 'inbox' ? inbox : undefined) },
+      sessionController: {
+        updateQueue: async (request) => {
+          updates.push(request);
+          return { accepted: true };
+        },
+      },
+    };
+    const manager = new SessionManager({ ctx: mockCtx });
+
+    const read = manager.getInbox('sess-1');
+    assert.deepEqual(read.nextTurn.map((m) => m.id), ['item_a']);
+    assert.deepEqual(read.nextStep.map((m) => m.id), ['item_s']);
+
+    // A session with no live instance, or a projection that throws, reads as empty
+    // rather than failing a delivery receipt.
+    assert.deepEqual(manager.getInbox('missing'), { nextTurn: [], nextStep: [] });
+    mockCtx.sessionProjections.stateOf = () => {
+      throw new Error('projection unavailable');
+    };
+    assert.deepEqual(manager.getInbox('sess-1'), { nextTurn: [], nextStep: [] });
+
+    mockCtx.sessionProjections.stateOf = () => inbox;
+    await manager.steerQueueItem('item_a', 'sess-1');
+    await manager.removeQueueItem('item_a', 'sess-1');
+    assert.deepEqual(updates, [
+      { sessionId: 'sess-1', itemId: 'item_a', action: { kind: 'steer' } },
+      { sessionId: 'sess-1', itemId: 'item_a', action: { kind: 'remove' } },
+    ]);
+  });
+
+  it('should surface the controller queue error codes unchanged', async () => {
+    const failure = Object.assign(new Error('current turn no longer accepts steering'), {
+      code: 'session/steer-unavailable',
+    });
+    const mockCtx = {
+      sessions: { get: (id) => ({ id }) },
+      sessionController: { updateQueue: async () => { throw failure; } },
+    };
+    const manager = new SessionManager({ ctx: mockCtx });
+
+    // The bridge maps these codes to QQ-facing wording, so they must survive.
+    await assert.rejects(manager.steerQueueItem('item_a', 'sess-1'), (err) => err.code === 'session/steer-unavailable');
+    await assert.rejects(manager.steerQueueItem('', 'sess-1'), /缺少待处理消息 ID/);
+  });
 });
