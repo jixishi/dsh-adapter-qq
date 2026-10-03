@@ -143,8 +143,20 @@ describe('MessageBridge', () => {
       cancelActiveTurn: async () => true,
     };
 
+    const questionAnswers = [];
+    const questionPicks = [];
+    let questionOutcome = { status: 'not-found' };
+    let pickOutcome = { status: 'not-found' };
     const mockApprovalHandler = {
       handleUserDecision: (id, decision) => true,
+      handleQuestionAnswer: (questionRef, optionLabel) => {
+        questionAnswers.push({ questionRef, optionLabel });
+        return questionOutcome;
+      },
+      pickQuestion: (questionRef) => {
+        questionPicks.push(questionRef);
+        return pickOutcome;
+      },
     };
 
     let config = {
@@ -175,6 +187,14 @@ describe('MessageBridge', () => {
       bridge,
       sentMessages,
       ackedInteractions,
+      questionAnswers,
+      questionPicks,
+      setQuestionOutcome: (outcome) => {
+        questionOutcome = outcome;
+      },
+      setPickOutcome: (outcome) => {
+        pickOutcome = outcome;
+      },
       getConfig: () => config,
     };
   }
@@ -617,5 +637,108 @@ describe('MessageBridge', () => {
     const last = harness.sentMessages[0];
     assert.ok(last.msg.markdown.includes('Agent 生成的代码回复'));
     harness.bridge.stop();
+  });
+
+  it('should decode a question button and leave progress feedback to the list card', async () => {
+    const harness = createTestHarness();
+    harness.setQuestionOutcome({
+      status: 'recorded',
+      index: 1,
+      total: 3,
+      answer: { selected: ['方案 B'] },
+      answerText: '方案 B',
+      remaining: [{ index: 2 }, { index: 0 }],
+    });
+
+    // A board button carries the question ordinal and the URL-encoded option label.
+    harness.gateway.emit('interaction', {
+      id: 'interact_answer',
+      user_openid: 'user_target',
+      data: {
+        resolved: {
+          button_data: `/answer 2 ${encodeURIComponent('方案 B')}`,
+        },
+      },
+    });
+
+    await new Promise((r) => setTimeout(r, 10));
+
+    assert.equal(harness.questionAnswers.length, 1);
+    assert.equal(harness.questionAnswers[0].questionRef, '2');
+    assert.equal(harness.questionAnswers[0].optionLabel, '方案 B');
+
+    // A recorded answer needs no reply text: the refreshed list card shows it.
+    assert.equal(harness.sentMessages.length, 0);
+
+    harness.bridge.stop();
+  });
+
+  it('should decode a question-list button into a pick', async () => {
+    const harness = createTestHarness();
+    harness.setPickOutcome({ status: 'opened', index: 2, total: 3 });
+
+    harness.gateway.emit('interaction', {
+      id: 'interact_pick',
+      user_openid: 'user_target',
+      data: {
+        resolved: {
+          button_data: '/pick 3',
+        },
+      },
+    });
+
+    await new Promise((r) => setTimeout(r, 10));
+
+    assert.deepEqual(harness.questionPicks, ['3']);
+    // Opening the question card is the feedback; nothing is sent here.
+    assert.equal(harness.sentMessages.length, 0);
+
+    harness.bridge.stop();
+  });
+
+  it('should tell the QQ user when the batch is complete, duplicate, ambiguous, or gone', async () => {
+    const cases = [
+      {
+        outcome: { status: 'completed', total: 3 },
+        expected: ['3 题全部答复完成'],
+      },
+      {
+        outcome: { status: 'duplicate', index: 2, total: 3, answer: { selected: ['方案 A'] }, answerText: '方案 A' },
+        expected: ['第 3/3 题已作答', '方案 A', '无需重复提交'],
+      },
+      {
+        outcome: { status: 'ambiguous', candidates: [{ id: 'q1', index: 0 }, { id: 'q3', index: 2 }] },
+        expected: ['有 2 题待作答', '/answer 3 选项'],
+      },
+      {
+        outcome: { status: 'empty', index: 0, total: 3 },
+        expected: ['还没有内容', '/answer 1 -'],
+      },
+      {
+        outcome: { status: 'not-found' },
+        expected: ['未找到对应的待回答问题'],
+      },
+    ];
+
+    for (const testCase of cases) {
+      const harness = createTestHarness();
+      harness.setQuestionOutcome(testCase.outcome);
+
+      harness.gateway.emit('c2c_message', {
+        id: 'msg_answer',
+        author: { user_openid: 'user_target' },
+        content: '/answer 1 方案 A',
+      });
+
+      await new Promise((r) => setTimeout(r, 20));
+
+      assert.equal(harness.sentMessages.length, 1, JSON.stringify(testCase.outcome));
+      const reply = harness.sentMessages[0].msg.content;
+      for (const fragment of testCase.expected) {
+        assert.ok(reply.includes(fragment), `${JSON.stringify(testCase.outcome)} → ${reply}`);
+      }
+
+      harness.bridge.stop();
+    }
   });
 });
