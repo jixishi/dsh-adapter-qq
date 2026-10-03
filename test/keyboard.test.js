@@ -137,4 +137,22 @@ describe('KeyboardBuilder', () => {
     assert.ok(b2.render_data.label.includes('✅'));
     assert.equal(b2.action.data, '/permission workspace-write');
   });
+
+  it('should build a steer/drop board for one queued message', () => {
+    const kb = KeyboardBuilder.buildQueueItemBoard('item_a');
+    const buttons = kb.content.rows.flatMap((row) => row.buttons);
+    assert.deepEqual(buttons.map((b) => b.action.data), ['/qsteer item_a', '/qdrop item_a']);
+    assert.ok(buttons[0].render_data.label.includes('插话'));
+  });
+
+  it('should build a queue listing board capped at the keyboard limit', () => {
+    const items = Array.from({ length: 7 }, (_, i) => ({ itemId: `item_${i}` }));
+    const kb = KeyboardBuilder.buildQueueListBoard(items);
+
+    // QQ allows at most 5 rows, so only the first five items get actions.
+    assert.equal(kb.content.rows.length, 5);
+    const data = kb.content.rows.flatMap((row) => row.buttons).map((b) => b.action.data);
+    assert.deepEqual(data.slice(0, 4), ['/qsteer item_0', '/qdrop item_0', '/qsteer item_1', '/qdrop item_1']);
+    assert.equal(data.some((d) => d.includes('item_6')), false);
+  });
 });
