@@ -328,4 +328,25 @@ describe('ApprovalHandler', () => {
     assert.ok(recalled.length >= 2, 'previous question cards should be recalled');
     handler.stop();
   });
+
+  it('prepends both answerers so the Web UI forwarder cannot starve them', () => {
+    const calls = [];
+    const mockCtx = {
+      on: (event, listener, options) => {
+        calls.push({ event, options });
+        return () => {};
+      },
+    };
+    const handler = new ApprovalHandler({
+      ctx: mockCtx,
+      apiClient: { sendC2CMessage: async () => ({ id: 'x' }) },
+      sessionManager: { getActiveSessionId: async () => null, getActiveSessionInfo: async () => null },
+      getUserOpenid: () => '',
+      logger: { info() {}, warn() {}, error() {} },
+    });
+    handler.start();
+    assert.equal(calls.find((c) => c.event === 'approval/request')?.options, true);
+    assert.equal(calls.find((c) => c.event === 'user-questions/request')?.options, true);
+    handler.stop();
+  });
 });
