@@ -302,7 +302,7 @@ pnpm test
 6. **`/skills` 或 `/mcp` 提示只读 / 未安装管理器？**
    - 启停能力依赖 `@xxxyz/dsh-mcp-manager`（其 HTTP API 必须可访问）。未安装或未启用时，菜单自动降级为只读列表；安装后发送 `/skills` 或 `/mcp` 刷新即可。
 7. **`/render` 很慢或提示回退引擎？**
-   - 首选本机 Edge/Chrome 无头渲染（首次启动约 1–2 秒）；若系统未安装浏览器或无法启动，会回退 Pillow，再回退 SVG（图片为矢量文件）。可用 `QQ_ADAPTER_BROWSER` 指定浏览器可执行文件路径。
+   - 首选本机 Edge/Chrome 无头渲染（首次启动约 1–2 秒）；若系统未安装浏览器或无法启动，会回退 Pillow，再回退 SVG（图片为矢量文件）。可用 `QQ_ADAPTER_BROWSER` 指定浏览器可执行文件路径；设为 `off` 可跳过无头浏览器、直接使用 Pillow。浏览器连续启动失败后会冷却 60 秒再重试，避免每次渲染都等待超时。
 8. **发送大文件失败？**
    - QQ 单聊文件软限制 200MB，>5MB 会自动走分片上传（prepare → 分片 PUT → part_finish → merge）；若网络中断请重试。图片 >20MB 会被 QQ 降级为文件类型上传。
 
