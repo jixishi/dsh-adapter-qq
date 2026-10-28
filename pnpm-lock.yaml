@@ -12,8 +12,17 @@ importers:
         specifier: ^4.0.0
         version: 4.0.2
       '@deepseek-ai/schemastery':
-        specifier: ^3.18.0
-        version: 3.18.2
+        specifier: 3.18.5
+        version: 3.18.5
+      '@flukxr/typst-cli':
+        specifier: 0.15.1-npm.0
+        version: 0.15.1-npm.0
+      '@fontpkg/lxgw-neo-xi-hei':
+        specifier: 1.110.0
+        version: 1.110.0
+      noto-color-emoji:
+        specifier: 1.0.1
+        version: 1.0.1
       ws:
         specifier: ^8.18.0
         version: 8.21.3
@@ -35,11 +44,61 @@ packages:
   '@deepseek-ai/cosmokit@1.8.3':
     resolution: {integrity: sha512-qBo+ronVM6Eu2WNVJXi8JcMiqZ19T9BRIpV+5qJUFPXjGH/Z0QKcQMC/IZJ7L394YTOtJgcovbk9qP0w2GsBXQ==}
 
-  '@deepseek-ai/schemastery@3.18.2':
-    resolution: {integrity: sha512-njDtZsznjYxok7KLLlHOPyuv2efdWVbSflAHgztSfbMsg+CVraEoRe2DjOCgClYv3ZCSm7WXoaUkbB/+RY7tWQ==}
+  '@deepseek-ai/cosmokit@1.8.6':
+    resolution: {integrity: sha512-ZSD/fN52L498LBIOYwjIOlaLv5veY6ZEwI2yzvZUKQtctn0QAPqu8tKdJ+OF5+Tv6NBq1U+wJWH+QI6OGy5EvQ==}
+
+  '@deepseek-ai/schemastery@3.18.5':
+    resolution: {integrity: sha512-Mnobvqf9rHsZYv4g5edj5ddxS1oF1kIdSlz0DunUgnY3LWG5F26MqvH3YOOsSaodCgyzJ16OMN9O99/s5Crtdw==}
+
+  '@flukxr/typst-cli-darwin-arm64@0.15.1-npm.0':
+    resolution: {integrity: sha512-r3IbSrcCjz7D8B9jVqE8YqhGOlQlzyOJTmVCdUBUZQkSCQpILYF7eIkOkKqLO2AlbseFLJZvlJA06VY12kerVA==}
+    engines: {node: '>=18'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@flukxr/typst-cli-darwin-x64@0.15.1-npm.0':
+    resolution: {integrity: sha512-7Gr9rsLAyGDjJup4n4sWZGwC5meEMsnVSI4X3+RU1iWYhiCCY0epg9E8Szf6WV+19XnGFCn4k3Z2CDapUR2pZw==}
+    engines: {node: '>=18'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@flukxr/typst-cli-linux-arm64@0.15.1-npm.0':
+    resolution: {integrity: sha512-8PPBv1DC5QxCaIAVfSgVvCKIGfW5TciSQVQyzO+w0u8x5DXTRpqhKeqLIDLMRbgn5POh6qMWTdxG2VEiuzQ3hA==}
+    engines: {node: '>=18'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@flukxr/typst-cli-linux-x64@0.15.1-npm.0':
+    resolution: {integrity: sha512-qzXyXhF0ebelZ5UfLsmh2892rWViKdDStOGaE7ua48Z35+U/lMiC9hsZ0nN3Lp3Tm8Iv9nG4d7v6dIKtdChCiQ==}
+    engines: {node: '>=18'}
+    cpu: [x64]
+    os: [linux]
+
+  '@flukxr/typst-cli-win32-arm64@0.15.1-npm.0':
+    resolution: {integrity: sha512-g9Mnnrm2TFuCs2SeoAwBmKXJs1Epw69XO5SMDvL+gxDZw8soD10vxv/DLpNegKQgd4U6/UpwHhCUqt9K0uV7hQ==}
+    engines: {node: '>=18'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@flukxr/typst-cli-win32-x64@0.15.1-npm.0':
+    resolution: {integrity: sha512-EUqMMyDNWqku3pons1bcEh7Vp9WUhfgax0CFOWYHUQJcUa3vO17zRwhribinS1FsRWeSOzjrlW+YrvEFMUtkFw==}
+    engines: {node: '>=18'}
+    cpu: [x64]
+    os: [win32]
+
+  '@flukxr/typst-cli@0.15.1-npm.0':
+    resolution: {integrity: sha512-Iu0fPIyTHVLFRna+AB7TDcrxhG5eTQCfq+jxM3OM18sIAHH6nZiZJ1qGqD23QOsikEe2yN+RxiAvEWu3UUEx8w==}
+    engines: {node: '>=18'}
+    hasBin: true
+
+  '@fontpkg/lxgw-neo-xi-hei@1.110.0':
+    resolution: {integrity: sha512-9p4qzVfXEq2O9DDbAxw0OTeYIqtVE+NEl8RrHPDq74WaY6JcyE7Xb1vZz2OucBMMdC0rmb11En5Laz6uKIv5Sw==}
 
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
+
+  noto-color-emoji@1.0.1:
+    resolution: {integrity: sha512-Vu53On8Q4ZEiqU25flsxdGhcK0qHJhpCg6AgFYm91NyGCUOn+cQGCA+iyniQJV7yGMZHqYQ743K+HmZ+aOOVKw==}
 
   ws@8.21.3:
     resolution: {integrity: sha512-201TZ/kPWxoPr/OKWjquZR1SWKXcvxdH+e1xrx89b3YbmzLMFCLfnaG1HFIgWzJOEWZ7MvpK++odZufgYR50Rw==}
@@ -62,11 +121,44 @@ snapshots:
 
   '@deepseek-ai/cosmokit@1.8.3': {}
 
-  '@deepseek-ai/schemastery@3.18.2':
+  '@deepseek-ai/cosmokit@1.8.6': {}
+
+  '@deepseek-ai/schemastery@3.18.5':
     dependencies:
-      '@deepseek-ai/cosmokit': 1.8.3
+      '@deepseek-ai/cosmokit': 1.8.6
       '@standard-schema/spec': 1.1.0
 
+  '@flukxr/typst-cli-darwin-arm64@0.15.1-npm.0':
+    optional: true
+
+  '@flukxr/typst-cli-darwin-x64@0.15.1-npm.0':
+    optional: true
+
+  '@flukxr/typst-cli-linux-arm64@0.15.1-npm.0':
+    optional: true
+
+  '@flukxr/typst-cli-linux-x64@0.15.1-npm.0':
+    optional: true
+
+  '@flukxr/typst-cli-win32-arm64@0.15.1-npm.0':
+    optional: true
+
+  '@flukxr/typst-cli-win32-x64@0.15.1-npm.0':
+    optional: true
+
+  '@flukxr/typst-cli@0.15.1-npm.0':
+    optionalDependencies:
+      '@flukxr/typst-cli-darwin-arm64': 0.15.1-npm.0
+      '@flukxr/typst-cli-darwin-x64': 0.15.1-npm.0
+      '@flukxr/typst-cli-linux-arm64': 0.15.1-npm.0
+      '@flukxr/typst-cli-linux-x64': 0.15.1-npm.0
+      '@flukxr/typst-cli-win32-arm64': 0.15.1-npm.0
+      '@flukxr/typst-cli-win32-x64': 0.15.1-npm.0
+
+  '@fontpkg/lxgw-neo-xi-hei@1.110.0': {}
+
   '@standard-schema/spec@1.1.0': {}
+
+  noto-color-emoji@1.0.1: {}
 
   ws@8.21.3: {}

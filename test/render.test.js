@@ -274,7 +274,7 @@ describe('renderTextImage orchestration', () => {
         outDir: dir,
         logger: { warn() {} },
       });
-      assert.ok(['browser', 'pillow', 'svg'].includes(result.engine));
+      assert.ok(['typst', 'browser', 'pillow', 'svg'].includes(result.engine));
       assert.ok(['image/png', 'image/svg+xml'].includes(result.mediaType));
       assert.equal(path.dirname(result.path), dir);
       assert.ok(result.width > 0 && result.height > 0);

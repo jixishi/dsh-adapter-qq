@@ -37,10 +37,11 @@
   - 聚合 DSH 技能列表（名称、来源、可调用性、停用状态），支持查看详情与**启停**（启停通过 `@xxxyz/dsh-mcp-manager` 的能力；该插件未安装时自动降级为只读列表）。
 - 🔌 **MCP 管理菜单（/mcp）**：
   - 列出 MCP 服务（传输方式、层级、加载状态、工具数），支持查看工具清单、**启停与重启**；未安装 MCP 管理器时按工具注册表降级展示。
-- 🖨️ **文本一键渲染为图片**：
+- 🖨️ **文本一键渲染为图片（内嵌 Typst）**：
   - `/render [文本]` 把文本/Markdown 渲染为图片发回 QQ（无参数时渲染最近一条 Agent 回复）。
   - 注册 Agent 工具 **`qq_render_text_image`** 与 **`qq_send_file`**，模型可主动调用。
-  - 渲染引擎优先级：本机 Edge/Chrome 无头单次截图（自动裁掉空白尾部，支持多组无头参数重试）→ Pillow（Markdown 转干净纯排版）→ 纯 SVG（始终可用）。空白截图会被识别并自动降级，不会把全黑/全白图发出去。
+  - 渲染引擎优先级：**内嵌 Typst 0.15（LXGW Neo XiHei + Noto Color Emoji，全彩 Emoji/CJK 原生混排）** → 本机 Edge/Chrome 无头单次截图 → Pillow → 纯 SVG。
+  - Typst 与两个字体随插件依赖内嵌（`@flukxr/typst-cli`、`@fontpkg/lxgw-neo-xi-hei`、`noto-color-emoji`），无需系统安装；单次排版+光栅化约 30ms 引擎耗时。
 - 📑 **全局自定义快捷菜单（PUT /v2/menu）**：
   - 启动后自动通过官方 [`PUT /v2/menu`](https://bot.q.qq.com/wiki/develop/api-v2/autogen/api/v2_menu.put.html) 接口向 QQ 开放平台注册底部快捷菜单，单聊底部直达会话列表、技能、MCP、当前状态与快捷管理。
 - 🧩 **动态预设与权限管理**：
@@ -108,7 +109,7 @@ QQ 开放平台 (q.qq.com)
   ├───────────────────────────── AdminInventory (lib/sync/inventory.js)
   │                                └─ POST /dsh-mcp-manager/api（技能/MCP 启停；缺失则只读降级）
   └───────────────────────────── Render pipeline (lib/render/*)
-                                   └─ Edge/Chrome headless → Pillow → SVG 兜底
+                                   └─ Typst（内嵌）→ Edge/Chrome headless → Pillow → SVG 兜底
 ```
 
 ---
@@ -228,7 +229,7 @@ dsh plugin --profile web add github:jixishi/dsh-adapter-qq
 | `qq_render_text_image` | 把 Markdown/纯文本渲染成图片（`text` 必填；`title`/`theme`/`width`/`send`/`filename` 可选），默认同时发送到当前绑定的 QQ 会话，返回本地文件路径与尺寸 |
 | `qq_send_file` | 把本地文件或 base64 内容发送到 QQ（`path` 或 `data_base64`，`as_image`/`filename`/`msg_id` 可选） |
 
-> 渲染引擎优先级：本机 Edge/Chrome 无头截图 → Pillow（需 Python + Pillow）→ 纯 SVG 兜底。可用环境变量 `QQ_ADAPTER_BROWSER` 指定浏览器路径、`QQ_ADAPTER_PYTHON` 指定 Python 解释器。
+> 渲染引擎优先级：内嵌 Typst（霞鹜新晰黑 + Google 全彩 Emoji）→ 本机 Edge/Chrome 无头截图 → Pillow（需 Python + Pillow）→ 纯 SVG 兜底。可用环境变量 `QQ_ADAPTER_BROWSER` 指定浏览器路径、`QQ_ADAPTER_PYTHON` 指定 Python 解释器。
 
 ### 4. 实时执行同步
 
@@ -277,11 +278,12 @@ pnpm test
 ✔ ApprovalHandler / multi-question (5 tests passed)
 ✔ MessageBridge (25 tests passed)
 ✔ Render engines (33 passed, 1 skipped)
+✔ Typst engine / markdown conversion (6 tests passed)
 ✔ qq_render_text_image tool (14 tests passed)
 ✔ AdminInventory (27 tests passed)
 ✔ qq_send_file tool (20 tests passed)
-ℹ tests 227
-ℹ pass 226
+ℹ tests 237
+ℹ pass 236
 ℹ skipped 1
 ℹ fail 0
 ```
@@ -304,7 +306,8 @@ pnpm test
 6. **`/skills` 或 `/mcp` 提示只读 / 未安装管理器？**
    - 启停能力依赖 `@xxxyz/dsh-mcp-manager`（其 HTTP API 必须可访问）。未安装或未启用时，菜单自动降级为只读列表；安装后发送 `/skills` 或 `/mcp` 刷新即可。
 7. **`/render` 很慢或提示回退引擎？**
-   - 首选本机 Edge/Chrome 无头渲染（首次启动约 1–2 秒）；若系统未安装浏览器或无法启动，会回退 Pillow，再回退 SVG（图片为矢量文件）。可用 `QQ_ADAPTER_BROWSER` 指定浏览器可执行文件路径；设为 `off` 可跳过无头浏览器、直接使用 Pillow。浏览器连续启动失败后会冷却 60 秒再重试，避免每次渲染都等待超时。
+   - 默认使用**内嵌 Typst**（无需系统安装任何东西），中文与全彩 Emoji 由随包字体渲染，通常几十毫秒完成；若 Typst 不可用才回退本机 Edge/Chrome 无头截图 → Pillow → SVG。可用 `QQ_ADAPTER_BROWSER` 指定浏览器路径（设为 `off` 跳过浏览器），`QQ_ADAPTER_PYTHON` 指定 Python。
+   - 若 Typst 报错，插件日志会打印最后三行 Typst 诊断（`[adapter-qq] Typst 渲染失败 ...`）。
 8. **发送大文件失败？**
    - QQ 单聊文件软限制 200MB，>5MB 会自动走分片上传（prepare → 分片 PUT → part_finish → merge）；若网络中断请重试。图片 >20MB 会被 QQ 降级为文件类型上传。
 
