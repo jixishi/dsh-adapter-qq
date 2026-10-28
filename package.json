@@ -1,6 +1,6 @@
 {
   "name": "dsh-adapter-qq",
-  "version": "0.3.0",
+  "version": "0.2.0",
   "description": "DeepSeek Harness QQ Bot Adapter - C2C chat, session sync, rich media, skills/MCP management, text-to-image tools",
   "type": "module",
   "main": "lib/index.js",
@@ -15,7 +15,8 @@
     "lib",
     "cordis.patch.yml",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "test": "node test/all.js"

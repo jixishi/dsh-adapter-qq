@@ -152,7 +152,7 @@ dsh plugin --profile web add github:jixishi/dsh-adapter-qq
 
 安装完成后，启动 DSH Web 界面（默认 `http://127.0.0.1:3080`），进入 **设置 (Settings) → 插件(Plugins)** 页面，点击顶部的 **【QQ 机器人】** tab 进行配置：
 
-> 0.2.1 的设置入口是「设置 → 插件」页内的 tab（与本机 CliProxyAPI 等插件一致）；旧版本的「设置 → QQ 机器人卡片」已不存在。**配置字段全部声明为 volatile**，保存后会写入 profile patch 并即时热应用（修改 AppID/AppSecret/沙箱后自动重连，无需重启 DSH）；仅升级插件版本后 host 半更新需重启一次。
+> DSH 0.2.1 的设置入口是「设置 → 插件」页内的 tab（与本机 CliProxyAPI 等插件一致）；旧版本的「设置 → QQ 机器人卡片」已不存在。**配置字段全部声明为 volatile**，保存后会写入 profile patch 并即时热应用（修改 AppID/AppSecret/沙箱后自动重连，无需重启 DSH）；仅升级插件版本后 host 半更新需重启一次。版本更新记录见 [CHANGELOG.md](./CHANGELOG.md)。
 
 | 配置项 | 说明 | 默认值 |
 | :--- | :--- | :--- |
