@@ -1,6 +1,12 @@
 import './client.test.js';
+import './media.test.js';
 import './keyboard.test.js';
+import './emoji.test.js';
 import './session-manager.test.js';
 import './gateway.test.js';
 import './approval-handler.test.js';
 import './message-bridge.test.js';
+import './render.test.js';
+import './tool-render-image.test.js';
+import './inventory.test.js';
+import './tool-send-file.test.js';

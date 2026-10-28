@@ -25,11 +25,21 @@ describe('MessageBridge', () => {
     };
 
     const sentMessages = [];
+    const sentImages = [];
+    const sentFiles = [];
     const ackedInteractions = [];
     const mockApiClient = {
       sendC2CMessage: async (openid, msg) => {
         sentMessages.push({ openid, msg });
         return { id: `msg_${sentMessages.length}` };
+      },
+      sendImage: async (openid, payload) => {
+        sentImages.push({ openid, payload });
+        return { fileInfo: 'IMG_INFO', messageId: `img_${sentImages.length}` };
+      },
+      sendFile: async (openid, payload) => {
+        sentFiles.push({ openid, payload });
+        return { fileInfo: 'FILE_INFO', messageId: `file_${sentFiles.length}` };
       },
       sendTyping: async () => true,
       registerDefaultGlobalMenu: async () => ({ version: 1 }),
@@ -44,9 +54,14 @@ describe('MessageBridge', () => {
 
     let activeSession = 'sess-1';
     const mockWorkspaces = [
-      { id: 'ws-1', title: 'qq-bot', path: 'F:/dsh-plugin/qq-bot', isRemote: false, sessionIds: ['sess-1'] },
+      { id: 'ws-1', title: 'qq-bot', path: 'F:/dsh-plugin/qq-bot', isRemote: false, sessionIds: ['sess-1', 'sess-2'] },
       { id: 'ws-remote', title: '免费:~', path: 'C:/Users/lydxh/.dsh/remote-workspaces/1', isRemote: true, sessionIds: [] },
     ];
+
+    const sessionOne = { sessionId: 'sess-1', title: '开发需求单', cwd: 'F:/dsh-plugin/qq-bot', agentPreset: 'standard', permission: 'workspace-write', running: false, index: 1 };
+    const sessionTwo = { sessionId: 'sess-2', title: '界面重叠分析', cwd: 'F:/dsh-plugin/qq-bot', agentPreset: 'ptc', permission: 'workspace-write', running: true, index: 2 };
+    const allMockSessions = [sessionOne, sessionTwo];
+    const EMOJIS = ['🍎', '🍊', '🍋', '🍇', '🍉', '🍓'];
 
     const mockSessionManager = {
       getActiveSessionId: async () => activeSession,
@@ -54,27 +69,33 @@ describe('MessageBridge', () => {
         activeSession = id;
         return true;
       },
-      listSessions: async () => [
-        { sessionId: 'sess-1', title: '开发需求单', cwd: 'F:/dsh-plugin/qq-bot', agentPreset: 'standard', running: false, index: 1 },
-      ],
+      listSessions: async () => allMockSessions,
       listWorkspaces: async () => mockWorkspaces,
       listSessionsGroupedByWorkspace: async () => ({
         groups: [
-          {
-            workspace: mockWorkspaces[0],
-            sessions: [
-              { sessionId: 'sess-1', title: '开发需求单', cwd: 'F:/dsh-plugin/qq-bot', agentPreset: 'standard', running: false, index: 1 },
-            ],
-          },
-          {
-            workspace: mockWorkspaces[1],
-            sessions: [],
-          },
+          { workspace: mockWorkspaces[0], sessions: allMockSessions },
+          { workspace: mockWorkspaces[1], sessions: [] },
         ],
-        allSessions: [
-          { sessionId: 'sess-1', title: '开发需求单', cwd: 'F:/dsh-plugin/qq-bot', agentPreset: 'standard', running: false, index: 1 },
-        ],
+        allSessions: allMockSessions,
       }),
+      getSessionPage: async (page = 1, pageSize = 6) => {
+        const total = allMockSessions.length;
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        const safePage = Math.min(Math.max(1, page), totalPages);
+        const items = allMockSessions.slice((safePage - 1) * pageSize, safePage * pageSize).map((s, idx) => ({
+          ...s,
+          emoji: EMOJIS[idx % EMOJIS.length],
+        }));
+        return {
+          page: safePage,
+          pageSize,
+          total,
+          totalPages,
+          items,
+          groups: items.length > 0 ? [{ workspace: mockWorkspaces[0], sessions: items }] : [],
+        };
+      },
+      findSessionByIndex: async (index) => allMockSessions.find((s) => s.index === index) || null,
       browseDirectory: async (dirPath, page = 1) => ({
         currentPath: dirPath || 'F:/dsh-plugin',
         subdirs: ['qq-bot', 'sub-folder'],
@@ -85,14 +106,10 @@ describe('MessageBridge', () => {
         parentPath: 'F:/',
       }),
       createDirectory: async (parent, name) => `${parent}/${name}`,
-      getActiveSessionInfo: async () => ({
-        sessionId: activeSession,
-        title: '开发需求单',
-        cwd: 'F:/dsh-plugin/qq-bot',
-        agentPreset: 'standard',
-        permission: 'workspace-write',
-        running: false,
-      }),
+      getActiveSessionInfo: async () => {
+        const found = allMockSessions.find((s) => s.sessionId === activeSession) || sessionOne;
+        return { ...found, sessionId: activeSession };
+      },
       getModelCatalog: async () => ({
         current: { provider: 'cpa', model: 'gemini-3.8-flash' },
         providers: [{ provider: 'cpa', displayName: 'CPA' }],
@@ -139,8 +156,31 @@ describe('MessageBridge', () => {
         { id: 'read-only', name: '只读' },
         { id: 'workspace-write', name: '工作区写入' },
       ],
-      switchPermission: (mode) => (mode === '只读' ? 'read-only' : 'workspace-write'),
+      switchPermission: async (mode) => (mode === '只读' ? 'read-only' : 'workspace-write'),
       cancelActiveTurn: async () => true,
+    };
+
+    const mockInventory = {
+      listSkills: async () => ({
+        available: true,
+        source: 'mcp-manager',
+        skills: [
+          { name: 'office', description: 'Office 文档处理', source: 'bundled', provider: 'runtime', invocation: { modelInvocable: true, userInvocable: true }, disabled: false },
+          { name: 'pdf-converter', description: 'PDF 转换', source: 'user-dsh', provider: 'runtime', invocation: { modelInvocable: true, userInvocable: true }, disabled: true },
+        ],
+      }),
+      toggleSkill: async (name, enabled) => ({ ok: true, warning: `${name}:${enabled}` }),
+      listMcpServers: async () => ({
+        available: true,
+        source: 'mcp-manager',
+        servers: [
+          { id: 'mcp-file', serverName: 'file-tools', transport: 'stdio', level: 'profile', disabled: false, readOnly: false, enabled: true, phase: 'active', toolCount: 3 },
+        ],
+      }),
+      mcpTools: async () => [{ name: 'file-tools__read', description: 'read a file' }],
+      setMcpEnabled: async (id, enabled) => ({ ok: true, warning: `${id}:${enabled}` }),
+      restartMcp: async (id) => ({ ok: true }),
+      invalidate: () => {},
     };
 
     const mockApprovalHandler = {
@@ -160,6 +200,7 @@ describe('MessageBridge', () => {
       gateway: mockGateway,
       sessionManager: mockSessionManager,
       approvalHandler: mockApprovalHandler,
+      inventory: mockInventory,
       getConfig: () => config,
       updateConfig: (patch) => {
         config = { ...config, ...patch };
@@ -174,7 +215,10 @@ describe('MessageBridge', () => {
       gateway: mockGateway,
       bridge,
       sentMessages,
+      sentImages,
+      sentFiles,
       ackedInteractions,
+      inventory: mockInventory,
       getConfig: () => config,
     };
   }
@@ -210,7 +254,8 @@ describe('MessageBridge', () => {
     assert.ok(last.msg.markdown.includes('工作区与会话列表'));
     assert.ok(last.msg.markdown.includes('📁 **qq-bot**'));
     assert.ok(last.msg.markdown.includes('开发需求单'));
-    assert.ok(last.msg.markdown.includes('📁 **免费:~** *(远程工作区)*'));
+    // Empty workspaces are no longer echoed on a page (output stays compact)
+    assert.ok(!last.msg.markdown.includes('暂无会话'));
     assert.ok(last.msg.keyboard);
     harness.bridge.stop();
   });
@@ -616,6 +661,223 @@ describe('MessageBridge', () => {
     assert.equal(harness.sentMessages.length, 1);
     const last = harness.sentMessages[0];
     assert.ok(last.msg.markdown.includes('Agent 生成的代码回复'));
+    harness.bridge.stop();
+  });
+
+  it('should paginate /sessions and mark every session on the page with a distinct emoji', async () => {
+    const harness = createTestHarness();
+    harness.getConfig().sessionPageSize = 1;
+
+    harness.gateway.emit('c2c_message', {
+      id: 'msg_page1',
+      author: { user_openid: 'user_target' },
+      content: '/sessions',
+    });
+    await new Promise((r) => setTimeout(r, 20));
+
+    assert.equal(harness.sentMessages.length, 1);
+    const page1 = harness.sentMessages[0].msg.markdown;
+    assert.ok(page1.includes('第 1/2 页'));
+    assert.ok(page1.includes('开发需求单'));
+    assert.ok(page1.includes('🍎'));
+    assert.ok(!page1.includes('界面重叠分析'));
+
+    harness.gateway.emit('c2c_message', {
+      id: 'msg_page2',
+      author: { user_openid: 'user_target' },
+      content: '/sessions 2',
+    });
+    await new Promise((r) => setTimeout(r, 20));
+
+    const page2 = harness.sentMessages[1].msg.markdown;
+    assert.ok(page2.includes('第 2/2 页'));
+    assert.ok(page2.includes('界面重叠分析'));
+    assert.ok(page2.includes('🍎'));
+    assert.ok(!page2.includes('开发需求单'));
+    harness.bridge.stop();
+  });
+
+  it('should switch session by emoji marker of the current page', async () => {
+    const harness = createTestHarness();
+
+    harness.gateway.emit('c2c_message', {
+      id: 'msg_emoji',
+      author: { user_openid: 'user_target' },
+      content: '/switch 🍊',
+    });
+    await new Promise((r) => setTimeout(r, 20));
+
+    assert.equal(harness.sentMessages.length, 1);
+    const last = harness.sentMessages[0].msg.markdown;
+    assert.ok(last.includes('已切换活跃会话'));
+    assert.ok(last.includes('界面重叠分析'));
+    assert.equal(harness.bridge.userSessionPageState.get('user_target').page, 1);
+    harness.bridge.stop();
+  });
+
+  it('should list skills and toggle a skill through the inventory', async () => {
+    const harness = createTestHarness();
+
+    harness.gateway.emit('c2c_message', {
+      id: 'msg_skills',
+      author: { user_openid: 'user_target' },
+      content: '/skills',
+    });
+    await new Promise((r) => setTimeout(r, 20));
+
+    assert.equal(harness.sentMessages.length, 1);
+    const list = harness.sentMessages[0].msg;
+    assert.ok(list.markdown.includes('技能管理'));
+    assert.ok(list.markdown.includes('office'));
+    assert.ok(list.markdown.includes('pdf-converter'));
+    assert.ok(list.keyboard);
+
+    harness.gateway.emit('c2c_message', {
+      id: 'msg_skill_off',
+      author: { user_openid: 'user_target' },
+      content: '/skill off pdf-converter',
+    });
+    await new Promise((r) => setTimeout(r, 20));
+
+    assert.equal(harness.sentMessages.length, 2);
+    assert.ok(harness.sentMessages[1].msg.markdown.includes('已停用'));
+    assert.ok(harness.sentMessages[1].msg.markdown.includes('pdf-converter'));
+    harness.bridge.stop();
+  });
+
+  it('should list MCP servers, show details and toggle enable state', async () => {
+    const harness = createTestHarness();
+
+    harness.gateway.emit('c2c_message', {
+      id: 'msg_mcp',
+      author: { user_openid: 'user_target' },
+      content: '/mcp',
+    });
+    await new Promise((r) => setTimeout(r, 20));
+
+    assert.equal(harness.sentMessages.length, 1);
+    assert.ok(harness.sentMessages[0].msg.markdown.includes('MCP 服务管理'));
+    assert.ok(harness.sentMessages[0].msg.markdown.includes('file-tools'));
+
+    harness.gateway.emit('c2c_message', {
+      id: 'msg_mcp_detail',
+      author: { user_openid: 'user_target' },
+      content: '/mcp mcp-file',
+    });
+    await new Promise((r) => setTimeout(r, 20));
+    assert.ok(harness.sentMessages[1].msg.markdown.includes('MCP 服务详情'));
+    assert.ok(harness.sentMessages[1].msg.markdown.includes('file-tools__read'));
+
+    harness.gateway.emit('c2c_message', {
+      id: 'msg_mcp_off',
+      author: { user_openid: 'user_target' },
+      content: '/mcp off mcp-file',
+    });
+    await new Promise((r) => setTimeout(r, 20));
+    assert.ok(harness.sentMessages[2].msg.markdown.includes('停用请求已提交'));
+    harness.bridge.stop();
+  });
+
+  it('should sniff the real image format instead of trusting QQ content_type', async () => {
+    const harness = createTestHarness();
+
+    let admittedContent = null;
+    harness.ctx.sessionController.prompt = async (req) => {
+      admittedContent = req.content;
+      return { accepted: true };
+    };
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async () => ({
+      ok: true,
+      // Real JPEG magic bytes, but QQ declares image/png
+      arrayBuffer: async () => Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46]),
+    });
+
+    try {
+      harness.gateway.emit('c2c_message', {
+        id: 'msg_jpeg',
+        author: { user_openid: 'user_target' },
+        content: '看看这张图',
+        attachments: [{ content_type: 'image/png', filename: 'photo.png', url: 'https://example.com/photo.png' }],
+      });
+      await new Promise((r) => setTimeout(r, 60));
+
+      const imgPart = admittedContent.find((p) => p.type === 'image');
+      assert.ok(imgPart);
+      assert.equal(imgPart.mediaType, 'image/jpeg');
+    } finally {
+      globalThis.fetch = originalFetch;
+      harness.bridge.stop();
+    }
+  });
+
+  it('should forward assistant image attachments to QQ as rich media', async () => {
+    const harness = createTestHarness();
+    harness.ctx.attachments = {
+      readImage: async () => ({
+        ref: { mediaType: 'image/png', name: 'chart.png' },
+        data: Buffer.from([0x89, 0x50, 0x4e, 0x47]),
+      }),
+    };
+
+    harness.ctx.emit('session/event', { id: 'sess-1' }, {
+      type: 'assistant/message',
+      data: {
+        message: {
+          content: [
+            { type: 'text', text: '图表已生成' },
+            { type: 'image', attachment: { attachmentId: 'sha256:deadbeef', mediaType: 'image/png' } },
+          ],
+        },
+      },
+    });
+
+    await new Promise((r) => setTimeout(r, 20));
+
+    assert.equal(harness.sentMessages.length, 1);
+    assert.equal(harness.sentImages.length, 1);
+    assert.equal(harness.sentImages[0].payload.filename, 'chart.png');
+    harness.bridge.stop();
+  });
+
+  it('should show /send usage without a path', async () => {
+    const harness = createTestHarness();
+
+    harness.gateway.emit('c2c_message', {
+      id: 'msg_send_usage',
+      author: { user_openid: 'user_target' },
+      content: '/send',
+    });
+    await new Promise((r) => setTimeout(r, 20));
+
+    assert.equal(harness.sentMessages.length, 1);
+    assert.ok(harness.sentMessages[0].msg.markdown.includes('发送文件'));
+    harness.bridge.stop();
+  });
+
+  it('should accept "/sessions page 2" and open skill detail via "/skills <name>"', async () => {
+    const harness = createTestHarness();
+
+    harness.gateway.emit('c2c_message', {
+      id: 'msg_page_token',
+      author: { user_openid: 'user_target' },
+      content: '/sessions page 1',
+    });
+    await new Promise((r) => setTimeout(r, 20));
+    assert.ok(harness.sentMessages[0].msg.markdown.includes('第 1/'));
+
+    // Skill button payload is `/skills <name>`: that must open the detail card
+    harness.gateway.emit('c2c_message', {
+      id: 'msg_skill_btn',
+      author: { user_openid: 'user_target' },
+      content: '/skills office',
+    });
+    await new Promise((r) => setTimeout(r, 20));
+    assert.equal(harness.sentMessages.length, 2);
+    const detail = harness.sentMessages[1].msg.markdown;
+    assert.ok(detail.includes('技能详情'));
+    assert.ok(detail.includes('office'));
     harness.bridge.stop();
   });
 });

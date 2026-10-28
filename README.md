@@ -8,6 +8,9 @@
 
 通过本插件，你可以在手机或桌面 QQ 聊天窗口中直接与 DSH Agent 进行完整对话，享受 DSH 的全量编码与执行能力（文件读写、Shell 执行、代码运行、子代理、多步规划、工作流），并实现与 **DSH Web UI 实时双向同屏联动**。
 
+> **兼容性**：本版本面向 **DSH 0.2.1-rc.3**（`engines.dsh: >=0.2.1-rc.3 <0.3.0`），Node.js ≥ 20。
+> 已适配 0.2.1 的 `SessionPromptRequest.mode`（`queue`/`steer`）、`ApprovalRequestEvent.agent`、`permissionPresets.catalog()`、`skills` 服务与 `sessionTitle`/`sessionQuery` 标题读取；旧版本 DSH 不再保证兼容。
+
 ---
 
 ## 🌟 核心特性
@@ -19,15 +22,32 @@
 - 🚦 **双向审批联动（Approval Waterfall）**：
   - 遇到超权限操作（如文件修改、系统命令等）时，审批卡片**同时推送至 QQ 与 Web UI**。
   - 支持在 QQ 交互按钮上一键点击 `[允许 (本次)]` 或 `[拒绝]`，两端任一端处理立即同步结算。
+- ❓ **多问题 / 多选提问支持**：
+  - `ask_user_question` 一次提交多个问题时按「第 1/3 题」向导逐题作答，全部答完后一次性提交完整答案批次（修复「连续多个提问只收到第一个」）。
+  - 多选题显示 `✅` 选中状态，可反复点选、`🗑️ 清空`，或直接回复 `/answer <ID> A,B`，最后点 `✅ 提交选择`。
 - 🎮 **交互式操作板（InlineKeyboard）**：
   - 支持在聊天中生成交互式按钮面板，一键切换会话、选择预设、切换权限，无需繁琐输入。
+- 🗂️ **分页会话列表 + emoji 会话标识**：
+  - 会话列表跨工作区展平分页（默认每页 6 个，可配置），每页内为每个会话分配**互不重复的 emoji**（🍎🍊🍋…）作为按键标识，列表里在会话名后附加同一 emoji。
+  - 支持点击按键、`/switch <序号>`、`/switch <emoji>`、`/switch <标题关键字>` 三种切换方式。
+- 🖼️ **富媒体收发（图片 / 文件）**：
+  - 入站：QQ 转发的图片按**字节魔数**识别真实格式（png/jpeg/gif/webp），修复 `Declared image type does not match its bytes.`；文件自动保存到会话 `uploads/` 并把文本预览/路径交给 Agent。
+  - 出站：`/send <路径>`、Agent 回复中的图片/文件、以及 `qq_send_file` 工具均可通过官方富媒体接口（`/v2/users/{openid}/files` + `msg_type=7`）发回 QQ，支持 ≤5MB 直传与 >5MB 分片上传。
+- 🧠 **技能管理菜单（/skills）**：
+  - 聚合 DSH 技能列表（名称、来源、可调用性、停用状态），支持查看详情与**启停**（启停通过 `@xxxyz/dsh-mcp-manager` 的能力；该插件未安装时自动降级为只读列表）。
+- 🔌 **MCP 管理菜单（/mcp）**：
+  - 列出 MCP 服务（传输方式、层级、加载状态、工具数），支持查看工具清单、**启停与重启**；未安装 MCP 管理器时按工具注册表降级展示。
+- 🖨️ **文本一键渲染为图片**：
+  - `/render [文本]` 把文本/Markdown 渲染为图片发回 QQ（无参数时渲染最近一条 Agent 回复）。
+  - 注册 Agent 工具 **`qq_render_text_image`** 与 **`qq_send_file`**，模型可主动调用。
+  - 渲染引擎优先级：本机 Edge/Chrome 无头单次截图（自动裁掉空白尾部，支持多组无头参数重试）→ Pillow（Markdown 转干净纯排版）→ 纯 SVG（始终可用）。空白截图会被识别并自动降级，不会把全黑/全白图发出去。
 - 📑 **全局自定义快捷菜单（PUT /v2/menu）**：
-  - 启动后自动通过官方 [`PUT /v2/menu`](https://bot.q.qq.com/wiki/develop/api-v2/autogen/api/v2_menu.put.html) 接口向 QQ 开放平台注册底部快捷菜单，单聊底部直达会话列表、当前状态与快捷管理。
+  - 启动后自动通过官方 [`PUT /v2/menu`](https://bot.q.qq.com/wiki/develop/api-v2/autogen/api/v2_menu.put.html) 接口向 QQ 开放平台注册底部快捷菜单，单聊底部直达会话列表、技能、MCP、当前状态与快捷管理。
 - 🧩 **动态预设与权限管理**：
-  - 预设列表从 DSH 运行时**动态获取**（内置 `standard`, `ptc`, `minimal`, `cordis` + 用户自定义预设），绝不硬编码。
-  - 支持在会话中即时切换权限级别：`只读` (`read-only`)、`工作区写入` (`workspace-write`)、`全系统` (`danger-full-access`)。
+  - 预设列表从 DSH 运行时**动态获取**（内置 + 用户自定义预设），绝不硬编码。
+  - 权限列表优先读取 `permissionPresets.catalog()`，支持在会话中即时切换 `只读` (`read-only`)、`工作区写入` (`workspace-write`)、`全系统` (`danger-full-access`)。
 - ⚙️ **原生 Web UI 配置**：
-  - 无需额外独立配置页，配置项通过 Cordis Settings 机制直接嵌入 DSH Web UI 原生设置页，安全保密字段（`clientSecret`, `token`）自动脱敏。
+  - 无需额外独立配置页，配置项通过 Cordis Settings 机制直接嵌入 DSH Web UI 原生设置页，安全保密字段（`clientSecret`, `token`, `mcpManagerToken`）自动脱敏。
 
 ---
 
@@ -69,19 +89,26 @@ QQ 开放平台 (q.qq.com)
   │    (Hello, Heartbeat,          │  分发 C2C_MESSAGE_CREATE / INTERACTION_CREATE
   │     Identify, Resume)          ▼
   │                         MessageBridge (lib/sync/message-bridge.js)
-  ├─ HTTP REST API ◀──────────  ├─ 指令解析器 (/sessions, /new, /switch, /preset, ...)
-  │    (POST /v2/users/.../messages)  ├─ 交互操作板构建器 (lib/ui/keyboard.js)
-  │    (PUT /v2/menu 快捷菜单)        ├─ 消息流式分段与清洗
+  ├─ HTTP REST API ◀──────────  ├─ 指令解析器 (/sessions, /switch, /skills, /mcp, /render, /send ...)
+  │    (POST /v2/users/.../messages)  ├─ 交互操作板构建器 (lib/ui/keyboard.js + lib/ui/emoji.js)
+  │    (POST /v2/users/.../files)     ├─ 消息流式分段与清洗
+  │    (PUT /v2/menu 快捷菜单)        ├─ 富媒体出站（图片/文件转发、渲染图回传）
   │                                   ▼
   │                         SessionManager (lib/sync/session-manager.js)
-  │                             │  调用 ctx.sessionController / ctx.agentPresets / ctx.permissionPresets
+  │                             │  会话分页 / emoji 分配 / 标题与权限读取
   │                             ▼
   │                         DeepSeek Harness 核心运行时 (Cordis Framework)
-  │                             ├─ ctx.sessions (会话上下文)
+  │                             ├─ ctx.sessions / ctx.sessionController (会话与 prompt)
   │                             ├─ ctx.on('session/event') (双向消息监听)
-  │                             └─ ctx.on('approval/request') (双向审批竞态)
+  │                             ├─ ctx.on('approval/request') (双向审批竞态)
+  │                             ├─ ctx.skills / ctx.permissionPresets
+  │                             └─ ctx.tools (qq_render_text_image / qq_send_file)
   │                                   ▲
-  └───────────────────────────── ApprovalHandler (lib/sync/approval-handler.js)
+  ├───────────────────────────── ApprovalHandler (lib/sync/approval-handler.js)
+  ├───────────────────────────── AdminInventory (lib/sync/inventory.js)
+  │                                └─ POST /dsh-mcp-manager/api（技能/MCP 启停；缺失则只读降级）
+  └───────────────────────────── Render pipeline (lib/render/*)
+                                   └─ Edge/Chrome headless → Pillow → SVG 兜底
 ```
 
 ---
@@ -137,6 +164,11 @@ dsh plugin --profile web add github:jixishi/dsh-adapter-qq
 | `markdown` | 消息回复优先使用 Markdown 渲染 | `true` |
 | `syncToolCalls` | 是否同步推送工具调用执行进度（防刷屏，默认关闭） | `false` |
 | `toolCallAggregateWindowMs` | 工具调用聚合推送窗口时间（毫秒，默认 30000ms / 30秒） | `30000` |
+| `sessionPageSize` | 会话列表每页数量（QQ 操作板建议 ≤6） | `6` |
+| `autoSendAttachments` | Agent 回复中的图片/文件自动转发到 QQ | `true` |
+| `renderWidth` | 文本渲染图片的像素宽度（480–1600） | `900` |
+| `renderTheme` | 文本渲染图片主题（`light` / `dark`） | `light` |
+| `mcpManagerToken` | `@xxxyz/dsh-mcp-manager` 写操作令牌（可选，密文遮罩；也可用环境变量 `DSH_MCP_MANAGER_TOKEN`） | `""` |
 
 保存后，插件会立即热重载配置并自动建立 WebSocket 连接，无需重启 DSH。
 
@@ -150,9 +182,9 @@ dsh plugin --profile web add github:jixishi/dsh-adapter-qq
 
 | 指令 | 简写/别名 | 功能说明 |
 | :--- | :--- | :--- |
-| `/sessions` | `/会话列表`, `/list` | 按工作区层级树形展示所有会话（本地与远程），带有人类可读标题与序号，附带操作板 |
+| `/sessions [页码]` | `/会话列表`, `/list` | 分页展示所有会话（跨工作区展平），**每页内每个会话带互不重复的 emoji 标识**，操作板可点击切换/翻页 |
 | `/new` | `/新建会话`, `/create` | 启动交互式新建会话向导：选择已有工作区（本地/远程）或进入目录浏览器 |
-| `/switch <序号或ID>` | `/切换 <序号或ID>` | 切换当前活跃会话（支持序号如 `/switch 1` 或会话标题/ID） |
+| `/switch <序号\|emoji\|ID>` | `/切换 <…>` | 切换当前活跃会话（支持全局序号如 `/switch 3`、当前页 emoji 如 `/switch 🍊`、会话 ID 前缀或标题关键字） |
 | `/current` | `/当前会话`, `/info` | 查看当前活跃会话的详细信息与操作板 |
 
 #### 新建会话交互向导流程：
@@ -173,19 +205,44 @@ dsh plugin --profile web add github:jixishi/dsh-adapter-qq
 | `/permission` | 显示当前权限级别及切换操作板 |
 | `/permission <模式>` | 切换权限模式：`只读` (`read-only`)、`工作区` (`workspace-write`)、`全系统` (`danger-full-access`) |
 
-### 3. 实时执行同步
+### 3. 技能 / MCP / 渲染与文件发送
+
+| 指令 | 说明 |
+| :--- | :--- |
+| `/skills [页码]` 或 `/技能` | 技能管理：分页列出技能（名称/来源/可调用性/启停状态），点击进入详情，支持 `✅/⛔` 状态展示 |
+| `/skill <名称>` | 查看单个技能详情（来源、provider、路径、适用场景、模型/用户可调用性） |
+| `/skill on\|off <名称>` | 启用 / 停用技能（需安装 `@xxxyz/dsh-mcp-manager`，否则只读并提示） |
+| `/mcp [页码]` 或 `/服务` | MCP 服务管理：分页列出服务（传输、层级、加载状态、工具数） |
+| `/mcp <ID或名称>` | 查看单个 MCP 服务详情与工具清单 |
+| `/mcp on\|off <ID>` | 启用 / 停用 MCP 服务 |
+| `/mcp restart <ID>` | 重启 MCP 服务 |
+| `/render [文本]` 或 `/渲染` | 把文本/Markdown 渲染成图片并发回 QQ；不带参数时渲染当前会话最近一条 Agent 回复 |
+| `/send <路径>` 或 `/发送文件` | 把本地文件发送到 QQ（相对路径按当前会话工作目录解析） |
+
+**Agent 可调用工具（由插件注册到 DSH）：**
+
+| 工具 | 说明 |
+| :--- | :--- |
+| `qq_render_text_image` | 把 Markdown/纯文本渲染成图片（`text` 必填；`title`/`theme`/`width`/`send`/`filename` 可选），默认同时发送到当前绑定的 QQ 会话，返回本地文件路径与尺寸 |
+| `qq_send_file` | 把本地文件或 base64 内容发送到 QQ（`path` 或 `data_base64`，`as_image`/`filename`/`msg_id` 可选） |
+
+> 渲染引擎优先级：本机 Edge/Chrome 无头截图 → Pillow（需 Python + Pillow）→ 纯 SVG 兜底。可用环境变量 `QQ_ADAPTER_BROWSER` 指定浏览器路径、`QQ_ADAPTER_PYTHON` 指定 Python 解释器。
+
+### 4. 实时执行同步
 
 在活跃会话中，Agent 的所有实时执行动作均会推送到 QQ：
 - 🛠️ 工具调用过程提示：如 `⚙️ [Agent 正在执行] 调用工具: pwsh ...`。
 - 💬 最终思考与回复：清洗内部控制标记后完整呈现，长文本自动智能分段，且被动回复过期时自动优雅降级为主动消息，避免漏发。
+- 🖼️ 回复中携带的图片/文件会自动转成 QQ 富媒体消息（`autoSendAttachments` 可关闭）。
 
-### 3. 执行控制与辅助指令
+### 5. 执行控制与辅助指令
 
 | 指令 | 说明 |
 | :--- | :--- |
 | `/cancel` 或 `/stop` | 中止当前 Agent 正在运行的轮次 |
 | `/approve [ID]` | 批准待审批请求（支持操作板一键点击） |
 | `/reject [ID]` | 拒绝待审批请求（支持操作板一键点击） |
+| `/answer <ID> <选项>` | 回答 Agent 的提问；多选题可回复 `A,B` 或点击操作板逐个选择后提交 |
 | `/menu` | 手动强制向 QQ 开放平台同步底部快捷菜单 (`PUT /v2/menu`) |
 | `/help` | 显示使用帮助菜单与全局快捷操作板 |
 
@@ -200,24 +257,30 @@ dsh plugin --profile web add github:jixishi/dsh-adapter-qq
 
 ## 🧪 单元测试
 
-本项目内置完整的单元测试套件（覆盖 API 客户端、InlineKeyboard 构建器、会话管理器、Gateway 网关协议、审批流中间件与消息桥接器）：
+本项目内置完整的单元测试套件（覆盖 API 客户端、媒体嗅探/富媒体上传、InlineKeyboard 与 emoji 操作板、会话分页、Gateway 网关协议、审批流与多问题/多选提问、消息桥接、渲染引擎与 agent 工具）：
 
 ```bash
 # 运行全部测试
 pnpm test
 ```
 
-测试结果：
+测试结果（DSH 0.2.1-rc.3 / Node 26，本机无头浏览器受限时浏览器用例会跳过）：
 ```text
-✔ QQApiClient (7 tests passed)
-✔ KeyboardBuilder (9 tests passed)
-✔ SessionManager (9 tests passed)
+✔ QQApiClient (20 tests passed)
+✔ QQ media helpers (35 tests passed)
+✔ KeyboardBuilder (19 tests passed)
+✔ Session emoji palette (5 tests passed)
+✔ SessionManager (17 tests passed)
 ✔ QQGatewayClient (6 tests passed)
-✔ ApprovalHandler (3 tests passed)
-✔ MessageBridge (17 tests passed)
-ℹ tests 51
-ℹ suites 6
-ℹ pass 51
+✔ ApprovalHandler / multi-question (5 tests passed)
+✔ MessageBridge (25 tests passed)
+✔ Render engines (33 passed, 1 skipped)
+✔ qq_render_text_image tool (14 tests passed)
+✔ AdminInventory (27 tests passed)
+✔ qq_send_file tool (20 tests passed)
+ℹ tests 227
+ℹ pass 226
+ℹ skipped 1
 ℹ fail 0
 ```
 
@@ -234,6 +297,14 @@ pnpm test
    - DSH 原生架构约定：会话产生第一轮对话后，其 Agent 预设插件树即固化，不可热变更预设。如需使用其他预设，请使用 `/new [目录] <预设名>` 创建新会话。
 4. **审批按钮点击无反应？**
    - 检查审批是否已在 Web UI 端先行处理；或者审批已超时关闭。两端任意一端处理后，状态会自动同步并提示已结算。
+5. **QQ 发图报 `Declared image type does not match its bytes.`？**
+   - 0.2.0 已修复：插件改为按字节魔数判定真实图片格式（png/jpeg/gif/webp），不再信任 QQ 的 `content_type`。若仍出现，请确认插件版本 ≥ 0.2.0 且 DSH 为 0.2.1-rc.3。
+6. **`/skills` 或 `/mcp` 提示只读 / 未安装管理器？**
+   - 启停能力依赖 `@xxxyz/dsh-mcp-manager`（其 HTTP API 必须可访问）。未安装或未启用时，菜单自动降级为只读列表；安装后发送 `/skills` 或 `/mcp` 刷新即可。
+7. **`/render` 很慢或提示回退引擎？**
+   - 首选本机 Edge/Chrome 无头渲染（首次启动约 1–2 秒）；若系统未安装浏览器或无法启动，会回退 Pillow，再回退 SVG（图片为矢量文件）。可用 `QQ_ADAPTER_BROWSER` 指定浏览器可执行文件路径。
+8. **发送大文件失败？**
+   - QQ 单聊文件软限制 200MB，>5MB 会自动走分片上传（prepare → 分片 PUT → part_finish → merge）；若网络中断请重试。图片 >20MB 会被 QQ 降级为文件类型上传。
 
 ---
 

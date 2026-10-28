@@ -97,7 +97,7 @@ describe('SessionManager', () => {
     assert.equal(presets[1].trust, 'user');
   });
 
-  it('should switch permission mode with friendly aliases', () => {
+  it('should switch permission mode with friendly aliases', async () => {
     let currentSet = '';
     const mockSession = { id: 's1' };
     const mockCtx = {
@@ -111,23 +111,27 @@ describe('SessionManager', () => {
       },
     };
 
-    const manager = new SessionManager({ ctx: mockCtx });
-    manager.cachedActiveSessionId = 's1';
+    const manager = new SessionManager({ ctx: mockCtx, getActiveSessionId: () => 's1' });
 
-    assert.equal(manager.switchPermission('只读'), 'read-only');
+    assert.equal(await manager.switchPermission('只读'), 'read-only');
     assert.equal(currentSet, 'read-only');
 
-    assert.equal(manager.switchPermission('工作区写入'), 'workspace-write');
+    assert.equal(await manager.switchPermission('工作区写入'), 'workspace-write');
     assert.equal(currentSet, 'workspace-write');
 
-    assert.equal(manager.switchPermission('全系统'), 'danger-full-access');
+    assert.equal(await manager.switchPermission('全系统'), 'danger-full-access');
     assert.equal(currentSet, 'danger-full-access');
 
-    assert.equal(manager.switchPermission('readonly'), 'read-only');
+    assert.equal(await manager.switchPermission('readonly'), 'read-only');
     assert.equal(currentSet, 'read-only');
 
-    assert.equal(manager.switchPermission('danger'), 'danger-full-access');
+    assert.equal(await manager.switchPermission('danger'), 'danger-full-access');
     assert.equal(currentSet, 'danger-full-access');
+  });
+
+  it('should reject switchPermission when there is no active session', async () => {
+    const manager = new SessionManager({ ctx: { sessions: { get: () => null } } });
+    await assert.rejects(() => manager.switchPermission('只读'), /No active session/);
   });
 
   it('should group sessions by workspace hierarchically', async () => {
@@ -293,5 +297,182 @@ describe('SessionManager', () => {
     assert.equal(createdRequest.cwd, 'F:/my-project');
     assert.equal(createdRequest.agentPreset, 'ptc');
     assert.equal(await manager.getActiveSessionId(), 'test-created-session');
+  });
+
+  it('should map permissions from permissionPresets.catalog() options first', () => {
+    const mockCtx = {
+      permissionPresets: {
+        catalog: () => ({
+          options: [
+            { value: 'read-only', name: '只读', description: '只读描述' },
+            { value: 'workspace-write', name: '工作区写入' },
+            { value: 'danger-full-access', name: '全系统', description: '全系统描述' },
+          ],
+          defaultOptions: ['workspace-write'],
+          defaultPreset: 'workspace-write',
+        }),
+        // legacy source must be ignored once catalog() yields options
+        names: ['read-only'],
+      },
+    };
+
+    const manager = new SessionManager({ ctx: mockCtx });
+    const permissions = manager.listPermissions();
+
+    assert.equal(permissions.length, 3);
+    assert.deepEqual(permissions[0], { id: 'read-only', name: '只读', description: '只读描述' });
+    assert.equal(permissions[1].id, 'workspace-write');
+    assert.equal(permissions[1].name, '工作区写入');
+    assert.ok(permissions[1].description.length > 0, 'missing description should fall back to a built-in one');
+    assert.equal(permissions[2].id, 'danger-full-access');
+  });
+
+  it('should fall back to names/resolve and then to built-in permissions', () => {
+    const legacyCtx = {
+      permissionPresets: {
+        names: ['read-only', 'workspace-write'],
+        resolve: (name) => ({ name: `${name}-name`, description: `${name}-desc` }),
+      },
+    };
+    const legacy = new SessionManager({ ctx: legacyCtx }).listPermissions();
+    assert.deepEqual(legacy.map((p) => p.id), ['read-only', 'workspace-write']);
+    assert.equal(legacy[1].description, 'workspace-write-desc');
+
+    const throwingCtx = {
+      permissionPresets: {
+        catalog: () => {
+          throw new Error('catalog unavailable');
+        },
+        names: ['read-only'],
+      },
+    };
+    assert.deepEqual(new SessionManager({ ctx: throwingCtx }).listPermissions().map((p) => p.id), ['read-only']);
+
+    const empty = new SessionManager({ ctx: {} }).listPermissions();
+    assert.deepEqual(empty.map((p) => p.id), ['read-only', 'workspace-write', 'danger-full-access']);
+  });
+
+  it('should prefer DSH sessionTitle/sessionQuery services for session titles', () => {
+    const live = { id: 'sid-1' };
+    const mockCtx = {
+      get: (name) => {
+        if (name === 'sessionTitle') {
+          return { get: (session) => ({ title: session === live ? '标题服务' : '' }) };
+        }
+        if (name === 'sessionQuery') {
+          return { readTitle: (sid) => ({ title: sid === 'sid-2' ? '查询服务标题' : '' }) };
+        }
+        return undefined;
+      },
+    };
+
+    const manager = new SessionManager({ ctx: mockCtx });
+    assert.equal(manager.resolveSessionTitle('sid-1', { title: 'item-title' }, live), '标题服务');
+    assert.equal(manager.resolveSessionTitle('sid-2', { title: 'item-title' }, { id: 'other' }), '查询服务标题');
+    assert.equal(manager.resolveSessionTitle('sid-3', { title: 'item-title' }, { id: 'other' }), 'item-title');
+
+    const throwingCtx = {
+      get: () => ({
+        get: () => {
+          throw new Error('boom');
+        },
+        readTitle: () => {
+          throw new Error('boom');
+        },
+      }),
+    };
+    const throwing = new SessionManager({ ctx: throwingCtx });
+    assert.equal(throwing.resolveSessionTitle('sid-4', { title: 'item-title' }, { id: 'sid-4' }), 'item-title');
+  });
+
+  describe('session paging', () => {
+    function createPagedCtx() {
+      const workspaces = [
+        { id: 'ws1', title: 'ws-one', path: 'W:/proj/one', sessionIds: ['s1', 's2', 's3'] },
+        { id: 'ws2', title: '远程:~', path: 'C:/Users/x/.dsh/remote-workspaces/r', sessionIds: ['s4', 's5'] },
+      ];
+      const items = [
+        { sessionId: 's1', title: '会话一', cwd: 'W:/proj/one', agentPreset: 'standard', running: true, updatedAt: 1000 },
+        { sessionId: 's2', title: '会话二', cwd: 'W:/proj/one', agentPreset: 'standard', running: false, updatedAt: 900 },
+        { sessionId: 's3', title: '会话三', cwd: 'W:/proj/one', agentPreset: 'ptc', running: false, updatedAt: 800 },
+        { sessionId: 's4', title: '会话四', cwd: 'C:/Users/x/.dsh/remote-workspaces/r', agentPreset: 'standard', running: false, updatedAt: 700 },
+        { sessionId: 's5', title: '会话五', cwd: 'C:/Users/x/.dsh/remote-workspaces/r', agentPreset: 'standard', running: false, updatedAt: 600 },
+        { sessionId: 's6', title: '松散会话', cwd: 'C:/tmp', agentPreset: 'minimal', running: false, updatedAt: 500 },
+        { sessionId: 's7', title: '再一个', cwd: 'C:/tmp2', agentPreset: 'minimal', running: false, updatedAt: 400 },
+      ];
+      return {
+        workspaceRegistry: { list: () => workspaces },
+        sessionController: { list: async () => ({ items }) },
+        sessions: { get: (id) => ({ id, header: { title: id } }) },
+        permissionPresets: { current: () => 'workspace-write' },
+      };
+    }
+
+    it('should flatten workspaces and page sessions with distinct emojis', async () => {
+      const manager = new SessionManager({ ctx: createPagedCtx() });
+
+      const page1 = await manager.getSessionPage(1, 6);
+      assert.equal(page1.page, 1);
+      assert.equal(page1.pageSize, 6);
+      assert.equal(page1.total, 7);
+      assert.equal(page1.totalPages, 2);
+      assert.deepEqual(page1.items.map((s) => s.sessionId), ['s1', 's2', 's3', 's4', 's5', 's6']);
+      assert.deepEqual(page1.items.map((s) => s.index), [1, 2, 3, 4, 5, 6]);
+
+      // Emojis are unique inside one page
+      const emojis = page1.items.map((s) => s.emoji);
+      assert.equal(new Set(emojis).size, 6);
+      assert.deepEqual(emojis, ['🍎', '🍊', '🍋', '🍇', '🍉', '🍓']);
+
+      // Each item carries its workspace metadata
+      assert.equal(page1.items[0].workspace.id, 'ws1');
+      assert.equal(page1.items[3].workspace.isRemote, true);
+
+      // groups contain only the current page, in display order
+      assert.deepEqual(page1.groups.map((g) => g.workspace.id), ['ws1', 'ws2', 'ungrouped']);
+      assert.deepEqual(page1.groups.map((g) => g.sessions.length), [3, 2, 1]);
+      assert.equal(page1.groups.flatMap((g) => g.sessions).length, page1.items.length);
+
+      const page2 = await manager.getSessionPage(2, 6);
+      assert.equal(page2.page, 2);
+      assert.equal(page2.items.length, 1);
+      assert.equal(page2.items[0].sessionId, 's7');
+      assert.equal(page2.items[0].emoji, '🍎');
+      assert.deepEqual(page2.groups.map((g) => g.workspace.id), ['ungrouped']);
+    });
+
+    it('should clamp page numbers into the valid range', async () => {
+      const manager = new SessionManager({ ctx: createPagedCtx() });
+
+      assert.equal((await manager.getSessionPage(0, 6)).page, 1);
+      assert.equal((await manager.getSessionPage(-5, 6)).page, 1);
+      assert.equal((await manager.getSessionPage(99, 6)).page, 2);
+      assert.equal((await manager.getSessionPage(2, 6)).page, 2);
+    });
+
+    it('should clamp an empty session list to page 1 with no items', async () => {
+      const manager = new SessionManager({
+        ctx: { workspaceRegistry: { list: () => [] }, sessionController: { list: async () => ({ items: [] }) } },
+      });
+
+      const page = await manager.getSessionPage(3, 6);
+      assert.equal(page.total, 0);
+      assert.equal(page.totalPages, 1);
+      assert.equal(page.page, 1);
+      assert.equal(page.pageSize, 6);
+      assert.deepEqual(page.items, []);
+      assert.deepEqual(page.groups, []);
+    });
+
+    it('should find a session by its 1-based sidebar index', async () => {
+      const manager = new SessionManager({ ctx: createPagedCtx() });
+
+      const found = await manager.findSessionByIndex(4);
+      assert.equal(found.sessionId, 's4');
+      assert.equal(found.index, 4);
+
+      assert.equal(await manager.findSessionByIndex(99), null);
+      assert.equal(await manager.findSessionByIndex('not-a-number'), null);
+    });
   });
 });

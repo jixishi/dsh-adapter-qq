@@ -1,5 +1,7 @@
 node_modules/
 uploads/
+.ref/
+tools/_*
 .DS_Store
 Thumbs.db
 *.log
