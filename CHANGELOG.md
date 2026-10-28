@@ -92,4 +92,5 @@ Targets **DeepSeek Harness 0.2.1-rc.3** (`engines.dsh: >=0.2.1-rc.3 <0.3.0`).
   keyboards/emoji, session pagination, gateway, approvals/questions, bridge,
   render engines, Typst, inventory and both agent tools.
 
+[0.2.1]: https://github.com/jixishi/dsh-adapter-qq/releases/tag/v0.2.1
 [0.2.0]: https://github.com/jixishi/dsh-adapter-qq/releases/tag/v0.2.0

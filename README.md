@@ -3,13 +3,16 @@
 [![Cordis](https://img.shields.io/badge/Cordis-Plugin-blue.svg)](https://github.com/deepseek-ai/deepseek-harness)
 [![QQ Open Platform](https://img.shields.io/badge/QQ%20Open%20Platform-OpenAPI%20v2-green.svg)](https://bot.q.qq.com/wiki/develop/api-v2/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-0.2.1-blue.svg)](CHANGELOG.md)
 
 `dsh-adapter-qq` 是针对 [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness) 深度定制的 **QQ 官方机器人（C2C 单聊模式）适配器插件**。
 
 通过本插件，你可以在手机或桌面 QQ 聊天窗口中直接与 DSH Agent 进行完整对话，享受 DSH 的全量编码与执行能力（文件读写、Shell 执行、代码运行、子代理、多步规划、工作流），并实现与 **DSH Web UI 实时双向同屏联动**。
 
-> **兼容性**：本版本面向 **DSH 0.2.1-rc.3**（`engines.dsh: >=0.2.1-rc.3 <0.3.0`），Node.js ≥ 20。
-> 已适配 0.2.1 的 `SessionPromptRequest.mode`（`queue`/`steer`）、`ApprovalRequestEvent.agent`、`permissionPresets.catalog()`、`skills` 服务与 `sessionTitle`/`sessionQuery` 标题读取；旧版本 DSH 不再保证兼容。
+> **当前插件版本：0.2.1**。本次更新为 **官方扫码绑定**：设置 → 插件 → QQ 机器人 → 「生成绑定二维码」，手机 QQ 扫码后自动填入 AppID / AppSecret / 绑定 OpenID；任何失败都会返回并在界面展示 `code` / `message` / `retcode` / `detail`，不再静默失败。详见 [CHANGELOG.md](./CHANGELOG.md)。
+>
+> **兼容性**：面向 **DSH 0.2.1-rc.3**（`engines.dsh: >=0.2.1-rc.3 <0.3.0`），Node.js ≥ 20。
+> 已适配 DSH 0.2.1 的 `SessionPromptRequest.mode`（`queue`/`steer`）、`ApprovalRequestEvent.agent`、`permissionPresets.catalog()`、`skills` 服务与 `sessionTitle`/`sessionQuery` 标题读取；旧版本 DSH 不再保证兼容。
 
 ---
 
