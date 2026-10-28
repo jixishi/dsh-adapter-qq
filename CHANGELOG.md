@@ -4,6 +4,28 @@ All notable changes to `dsh-adapter-qq` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.2.1] - 2026-10-28
+
+### Added
+
+- **Official scan-to-bind (扫码绑定)**: the settings tab can create a q.qq.com
+  bind task (`/lite/create_bind_task`), render its `openclaw/connect.html`
+  QR code, poll `/lite/poll_bind_result`, and decrypt `bot_encrypt_secret` with
+  the local AES-256-GCM key (IV 12 B, tag 16 B). A confirmed scan fills AppID,
+  AppSecret and the scanner's OpenID and saves them.
+- Same-origin host API `POST /dsh-adapter-qq/api` (`onboard-create`,
+  `onboard-poll`, `onboard-cancel`) guarded by the `x-dsh-plugin:
+  dsh-adapter-qq` header; the AES key stays in the host process.
+- Every failure returns a structured `{ ok:false, error:{ code, message,
+  retcode?, detail?, status? } }`; the settings panel renders the code, message,
+  q.qq.com retcode and detail instead of failing silently.
+
+### Changed
+
+- New dependency `qrcode` (host-side QR data URL for the binding panel).
+- Test suite: 11 scan-to-bind cases (protocol, AES-GCM round trip, portal
+  errors, task expiry, route guard) — 248 total, 247 pass, 1 skipped.
+
 ## [0.2.0] - 2026-10-28
 
 Targets **DeepSeek Harness 0.2.1-rc.3** (`engines.dsh: >=0.2.1-rc.3 <0.3.0`).

@@ -42,6 +42,10 @@
   - 注册 Agent 工具 **`qq_render_text_image`** 与 **`qq_send_file`**，模型可主动调用。
   - 渲染引擎优先级：**内嵌 Typst 0.15（LXGW Neo XiHei + Noto Color Emoji，全彩 Emoji/CJK 原生混排）** → 本机 Edge/Chrome 无头单次截图 → Pillow → 纯 SVG。
   - Typst 与两个字体随插件依赖内嵌（`@flukxr/typst-cli`、`@fontpkg/lxgw-neo-xi-hei`、`noto-color-emoji`），无需系统安装；单次排版+光栅化约 30ms 引擎耗时。
+- 🔗 **官方扫码绑定（扫码配置）**：
+  - 设置页提供「生成绑定二维码」，走 `q.qq.com` 官方 bind-task 协议：`/lite/create_bind_task` → 手机 QQ 扫描 `connect.html?task_id=…` → `/lite/poll_bind_result` 轮询。
+  - 扫码确认后自动填入 **AppID / AppSecret / 绑定用户 OpenID** 并保存；`bot_encrypt_secret` 用本地生成的 AES-256-GCM 密钥加密回传，仅本机解密，密钥不出进程。
+  - 所有失败都返回结构化错误（`code` / `message` / `retcode` / `detail`）并显示在设置页，便于定位 q.qq.com 拒绝原因或网络问题。
 - 📑 **全局自定义快捷菜单（PUT /v2/menu）**：
   - 启动后自动通过官方 [`PUT /v2/menu`](https://bot.q.qq.com/wiki/develop/api-v2/autogen/api/v2_menu.put.html) 接口向 QQ 开放平台注册底部快捷菜单，单聊底部直达会话列表、技能、MCP、当前状态与快捷管理。
 - 🧩 **动态预设与权限管理**：
@@ -151,6 +155,8 @@ dsh plugin --profile web add github:jixishi/dsh-adapter-qq
 ### 2. 在 DSH Web UI 中配置
 
 安装完成后，启动 DSH Web 界面（默认 `http://127.0.0.1:3080`），进入 **设置 (Settings) → 插件(Plugins)** 页面，点击顶部的 **【QQ 机器人】** tab 进行配置：
+
+**推荐：扫码绑定** —— 点击「生成绑定二维码」，用手机 QQ 扫码并按提示确认；成功后会自动填入 AppID、AppSecret 与绑定 OpenID 并保存。二维码约 2 分钟有效，过期可重新生成。若 q.qq.com 拒绝或网络异常，界面会显示 `[code] message`、`retcode` 与 `detail`，不会静默失败。
 
 > DSH 0.2.1 的设置入口是「设置 → 插件」页内的 tab（与本机 CliProxyAPI 等插件一致）；旧版本的「设置 → QQ 机器人卡片」已不存在。**配置字段全部声明为 volatile**，保存后会写入 profile patch 并即时热应用（修改 AppID/AppSecret/沙箱后自动重连，无需重启 DSH）；仅升级插件版本后 host 半更新需重启一次。版本更新记录见 [CHANGELOG.md](./CHANGELOG.md)。
 
@@ -275,6 +281,7 @@ pnpm test
 ✔ Session emoji palette (5 tests passed)
 ✔ SessionManager (17 tests passed)
 ✔ QQGatewayClient (6 tests passed)
+✔ QQ scan-to-bind protocol (11 tests passed)
 ✔ ApprovalHandler / multi-question (5 tests passed)
 ✔ MessageBridge (25 tests passed)
 ✔ Render engines (33 passed, 1 skipped)
@@ -282,8 +289,8 @@ pnpm test
 ✔ qq_render_text_image tool (14 tests passed)
 ✔ AdminInventory (27 tests passed)
 ✔ qq_send_file tool (20 tests passed)
-ℹ tests 237
-ℹ pass 236
+ℹ tests 248
+ℹ pass 247
 ℹ skipped 1
 ℹ fail 0
 ```

@@ -1,6 +1,6 @@
 {
   "name": "dsh-adapter-qq",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "DeepSeek Harness QQ Bot Adapter - C2C chat, session sync, rich media, skills/MCP management, text-to-image tools",
   "type": "module",
   "main": "lib/index.js",
@@ -46,6 +46,7 @@
     "@flukxr/typst-cli": "0.15.1-npm.0",
     "@fontpkg/lxgw-neo-xi-hei": "1.110.0",
     "noto-color-emoji": "1.0.1",
+    "qrcode": "^1.5.4",
     "ws": "^8.18.0"
   },
   "peerDependencies": {
