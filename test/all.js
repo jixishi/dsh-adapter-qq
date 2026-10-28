@@ -1,4 +1,5 @@
 import './client.test.js';
+import './config.test.js';
 import './media.test.js';
 import './keyboard.test.js';
 import './emoji.test.js';
