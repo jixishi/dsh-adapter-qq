@@ -3,3 +3,4 @@
 - insert:
     - id: adapter-qq
       name: dsh-adapter-qq
+      config: {}

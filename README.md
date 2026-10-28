@@ -47,7 +47,7 @@
   - 预设列表从 DSH 运行时**动态获取**（内置 + 用户自定义预设），绝不硬编码。
   - 权限列表优先读取 `permissionPresets.catalog()`，支持在会话中即时切换 `只读` (`read-only`)、`工作区写入` (`workspace-write`)、`全系统` (`danger-full-access`)。
 - ⚙️ **原生 Web UI 配置**：
-  - 无需额外独立配置页，配置项通过 Cordis Settings 机制直接嵌入 DSH Web UI 原生设置页，安全保密字段（`clientSecret`, `token`, `mcpManagerToken`）自动脱敏。
+  - 无需额外独立配置页：配置通过导出的 `Config` schema 由 DSH 0.2.1 设置系统投影，客户端在 **设置 → 插件 → QQ 机器人** 注册独立 tab，安全保密字段（`clientSecret`, `token`, `mcpManagerToken`）自动脱敏。
 
 ---
 
@@ -149,7 +149,9 @@ dsh plugin --profile web add github:jixishi/dsh-adapter-qq
 
 ### 2. 在 DSH Web UI 中配置
 
-安装完成后，启动 DSH Web 界面（默认 `http://127.0.0.1:3080`），进入 **设置 (Settings)** 页面，展开 **【QQ 机器人 (QQ Bot)】** 卡片：
+安装完成后，启动 DSH Web 界面（默认 `http://127.0.0.1:3080`），进入 **设置 (Settings) → 插件(Plugins)** 页面，点击顶部的 **【QQ 机器人】** tab 进行配置：
+
+> 0.2.1 的设置入口是「设置 → 插件」页内的 tab（与本机 CliProxyAPI 等插件一致）；旧版本的「设置 → QQ 机器人卡片」已不存在。保存后通过 Loader 热应用，无需重启；若刚升级插件版本，host 半更新需重启一次 DSH。
 
 | 配置项 | 说明 | 默认值 |
 | :--- | :--- | :--- |
