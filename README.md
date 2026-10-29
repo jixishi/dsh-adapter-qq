@@ -41,6 +41,8 @@
   - `/tasks`（`/任务`、`/任务管理`）：一张图查看 DSH「任务」页的定时/自动化任务（规则、状态、计划时间、绑定会话）。
   - `/jobs`（`/后台任务`）：仅在启用官方持久终端（`@deepseek-ai/dsh-terminal`）时自动注册，查看运行中的后台任务。
   - 官方团队插件（Agent Teams）启用时，`/status` 使用其 roster 渲染 Lead/成员角色与状态；未启用时回退到普通子代理列表。
+  - 示例（主代理 + 团队成员 + 后台任务）：
+    <img src="docs/images/agent-status.png" width="480" alt="代理与后台任务状态图" />
 - 🖼️ **富媒体收发（图片 / 文件）**：
   - 入站：QQ 转发的图片按**字节魔数**识别真实格式（png/jpeg/gif/webp），修复 `Declared image type does not match its bytes.`；文件自动保存到会话 `uploads/` 并把文本预览/路径交给 Agent。
   - 出站：`/send <路径>`、Agent 回复中的图片/文件、以及 `qq_send_file` 工具均可通过官方富媒体接口（`/v2/users/{openid}/files` + `msg_type=7`）发回 QQ，支持 ≤5MB 直传与 >5MB 分片上传。
@@ -71,7 +73,7 @@
 
 | 1. 工作区与会话列表 (`/sessions`) | 2. Agent 交互提问 (`ask_user_question`) |
 | :---: | :---: |
-| <img src="docs/images/workspace-sessions.png" width="360" alt="工作区与会话列表" /> | <img src="docs/images/user-question.png" width="360" alt="Agent 交互提问" /> |
+| <img src="docs/images/workspace-sessions.png" width="360" alt="工作区与会话列表（引用块层级）" /> | <img src="docs/images/user-question.png" width="360" alt="Agent 交互提问" /> |
 | **层级化对齐 DSH 侧边栏，支持按键一键切换** | **紧凑 A/B/C/D 操作板，点击即回传 Agent** |
 
 | 3. 双向权限审批联动 (`/approve` / `/reject`) | 4. 实时工具调用执行进度 (可选聚合) |

@@ -37,9 +37,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `terminal_send`/`terminal_open` tools, and finally the Loader tree /
   `pluginInventory` — because `@deepseek-ai/dsh-terminal` lives in
   `isolate: { terminals: true }` and is invisible to the host context.
+- Cold sessions now derive their permission preset from the persisted
+  `permissions` session projection (`permissionPresets.derive()`), so the
+  session list no longer shows 未知 for sessions without a live Agent.
+- Docs: refreshed `docs/images/workspace-sessions.png` with the quote-block
+  hierarchy and added `docs/images/agent-status.png` for `/status`.
 - Tests: 262 total (261 pass, 1 skipped), covering path modes, label fallbacks,
   schedule formatting, team/job capability gating, isolated-terminal detection
-  via Agent context/tools/Loader inventory, and conditional menu items.
+  via Agent context/tools/Loader inventory, cold-session permission derivation,
+  and conditional menu items.
 
 ## [0.2.1] - 2026-10-28
 

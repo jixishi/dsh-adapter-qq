@@ -26,15 +26,21 @@ describe('SessionManager', () => {
               agentPreset: 'ptc',
               running: true,
               updatedAt: 2000,
+              projections: {
+                values: {
+                  permissions: { preset: 'read-only', sandbox: 'read-only', approval: 'never' },
+                },
+              },
             },
           ],
         }),
       },
       sessions: {
-        get: (id) => ({ id, header: { title: id } }),
+        get: (id) => (id === 'sess-1' ? { id, header: { title: id } } : null),
       },
       permissionPresets: {
-        current: (session) => 'workspace-write',
+        current: () => 'workspace-write',
+        derive: () => 'read-only',
       },
     };
 
@@ -45,7 +51,9 @@ describe('SessionManager', () => {
     // Should be sorted by updatedAt desc
     assert.equal(list[0].sessionId, 'sess-2');
     assert.equal(list[0].running, true);
+    assert.equal(list[0].permission, 'read-only');
     assert.equal(list[1].sessionId, 'sess-1');
+    assert.equal(list[1].permission, 'workspace-write');
   });
 
   it('should track and switch active session', async () => {
