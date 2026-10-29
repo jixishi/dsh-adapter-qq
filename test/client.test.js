@@ -98,6 +98,29 @@ describe('QQApiClient', () => {
     }
   });
 
+  it('should add status/tasks/jobs menu entries only when official plugins are enabled', () => {
+    const client = new QQApiClient({ appId: '123', clientSecret: 'sec' });
+    const plain = client.getDefaultMenu().items.map((item) => item.send_message).filter(Boolean);
+    assert.ok(!plain.includes('/status'));
+    assert.ok(!plain.includes('/tasks'));
+    assert.ok(!plain.includes('/jobs'));
+
+    const full = client
+      .getDefaultMenu({ team: true, schedule: true, terminal: true })
+      .items.map((item) => item.send_message)
+      .filter(Boolean);
+    assert.ok(full.includes('/status'));
+    assert.ok(full.includes('/tasks'));
+    assert.ok(full.includes('/jobs'));
+
+    const terminalOnly = client
+      .getDefaultMenu({ terminal: true })
+      .items.map((item) => item.send_message)
+      .filter(Boolean);
+    assert.ok(terminalOnly.includes('/jobs'));
+    assert.ok(!terminalOnly.includes('/tasks'));
+  });
+
   it('should expose skills, MCP and render shortcuts in the default menu', () => {
     const client = new QQApiClient({ appId: '123', clientSecret: 'sec' });
     const menu = client.getDefaultMenu();

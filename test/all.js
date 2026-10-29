@@ -8,6 +8,7 @@ import './gateway.test.js';
 import './onboard.test.js';
 import './approval-handler.test.js';
 import './message-bridge.test.js';
+import './task-overview.test.js';
 import './render.test.js';
 import './typst.test.js';
 import './tool-render-image.test.js';

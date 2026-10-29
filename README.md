@@ -9,7 +9,7 @@
 
 通过本插件，你可以在手机或桌面 QQ 聊天窗口中直接与 DSH Agent 进行完整对话，享受 DSH 的全量编码与执行能力（文件读写、Shell 执行、代码运行、子代理、多步规划、工作流），并实现与 **DSH Web UI 实时双向同屏联动**。
 
-> **当前插件版本：0.2.2**。本次更新：会话列表路径可按配置显示**完整路径或仅最后一级文件夹**（`sessionPathDisplay`），会话名后的**预设/权限改为可读名称**（如 `标准模式` / `工作区写入`，不再显示 ID）。0.2.1 起支持 **官方扫码绑定**：设置 → 插件 → QQ 机器人 → 「生成绑定二维码」，手机 QQ 扫码后自动填入 AppID / AppSecret / 绑定 OpenID；任何失败都会返回并在界面展示 `code` / `message` / `retcode` / `detail`，不再静默失败。详见 [CHANGELOG.md](./CHANGELOG.md)。
+> **当前插件版本：0.2.2**。本次更新：会话列表路径可按配置显示**完整路径或仅最后一级文件夹**（`sessionPathDisplay`），会话名后的**预设/权限改为可读名称**；新增 **`/status` 代理与后台任务图**、**`/tasks` 任务管理图**，并在启用官方持久终端时自动注册 **`/jobs`**。0.2.1 起支持 **官方扫码绑定**：设置 → 插件 → QQ 机器人 → 「生成绑定二维码」，手机 QQ 扫码后自动填入 AppID / AppSecret / 绑定 OpenID；任何失败都会返回并在界面展示 `code` / `message` / `retcode` / `detail`，不再静默失败。详见 [CHANGELOG.md](./CHANGELOG.md)。
 >
 > **兼容性**：面向 **DSH 0.2.1-rc.3**（`engines.dsh: >=0.2.1-rc.3 <0.3.0`），Node.js ≥ 20。
 > 已适配 DSH 0.2.1 的 `SessionPromptRequest.mode`（`queue`/`steer`）、`ApprovalRequestEvent.agent`、`permissionPresets.catalog()`、`skills` 服务与 `sessionTitle`/`sessionQuery` 标题读取；旧版本 DSH 不再保证兼容。
@@ -35,6 +35,11 @@
   - 工作区路径可按配置显示**完整路径**或**仅最后一级文件夹**（`sessionPathDisplay`，默认 `tail`）。
   - 会话名后的预设/权限使用可读名称（如 `标准模式` / `工作区写入`），不再直接显示 `standard` / `workspace-write` 这类 ID；自定义预设仍显示其 DSH 名称。
   - 支持点击按键、`/switch <序号>`、`/switch <emoji>`、`/switch <标题关键字>` 三种切换方式。
+- 🧭 **任务与代理状态图片（Typst 渲染）**：
+  - `/status`（`/状态`、`/代理`）：一张图查看**主代理**状态（标题/模型/预设/权限/目录）、团队成员或子代理状态，以及正在进行的后台任务。
+  - `/tasks`（`/任务`、`/任务管理`）：一张图查看 DSH「任务」页的定时/自动化任务（规则、状态、计划时间、绑定会话）。
+  - `/jobs`（`/后台任务`）：仅在启用官方持久终端（`@deepseek-ai/dsh-terminal`）时自动注册，查看运行中的后台任务。
+  - 官方团队插件（Agent Teams）启用时，`/status` 使用其 roster 渲染 Lead/成员角色与状态；未启用时回退到普通子代理列表。
 - 🖼️ **富媒体收发（图片 / 文件）**：
   - 入站：QQ 转发的图片按**字节魔数**识别真实格式（png/jpeg/gif/webp），修复 `Declared image type does not match its bytes.`；文件自动保存到会话 `uploads/` 并把文本预览/路径交给 Agent。
   - 出站：`/send <路径>`、Agent 回复中的图片/文件、以及 `qq_send_file` 工具均可通过官方富媒体接口（`/v2/users/{openid}/files` + `msg_type=7`）发回 QQ，支持 ≤5MB 直传与 >5MB 分片上传。
@@ -201,6 +206,9 @@ dsh plugin --profile web add github:jixishi/dsh-adapter-qq
 | `/new` | `/新建会话`, `/create` | 启动交互式新建会话向导：选择已有工作区（本地/远程）或进入目录浏览器 |
 | `/switch <序号\|emoji\|ID>` | `/切换 <…>` | 切换当前活跃会话（支持全局序号如 `/switch 3`、当前页 emoji 如 `/switch 🍊`、会话 ID 前缀或标题关键字） |
 | `/current` | `/当前会话`, `/info` | 查看当前活跃会话的详细信息与操作板 |
+| `/status` | `/状态`, `/代理` | 图片查看主代理、团队成员（启用 Agent Teams 时）/子代理状态，以及正在进行的后台任务 |
+| `/tasks` | `/任务`, `/任务管理`, `/schedule` | 图片查看 DSH「任务」页的定时/自动化任务（规则、状态、计划时间、绑定会话） |
+| `/jobs` | `/后台任务` | 图片查看运行中的后台任务；仅在启用官方持久终端时自动注册 |
 
 #### 新建会话交互向导流程：
 1. **工作区选择 (第 1 步)**：发送 `/new`，操作板展示所有已有工作区（如 `📁 免费:~ (远程)`, `📁 qq-bot`, `📁 AutoAim`）及【🔍 浏览并选择目录】。
@@ -281,7 +289,7 @@ pnpm test
 
 测试结果（DSH 0.2.1-rc.3 / Node 26，本机无头浏览器受限时浏览器用例会跳过）：
 ```text
-✔ QQApiClient (20 tests passed)
+✔ QQApiClient (21 tests passed)
 ✔ QQ media helpers (35 tests passed)
 ✔ KeyboardBuilder (19 tests passed)
 ✔ Session emoji palette (5 tests passed)
@@ -290,13 +298,14 @@ pnpm test
 ✔ QQ scan-to-bind protocol (11 tests passed)
 ✔ ApprovalHandler / multi-question (5 tests passed)
 ✔ MessageBridge (27 tests passed)
+✔ Task overview (8 tests passed)
 ✔ Render engines (33 passed, 1 skipped)
 ✔ Typst engine / markdown conversion (6 tests passed)
 ✔ qq_render_text_image tool (14 tests passed)
 ✔ AdminInventory (27 tests passed)
 ✔ qq_send_file tool (20 tests passed)
-ℹ tests 250
-ℹ pass 249
+ℹ tests 259
+ℹ pass 258
 ℹ skipped 1
 ℹ fail 0
 ```

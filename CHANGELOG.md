@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `sessionPathDisplay` setting (`tail` | `full`, default `tail`): the session
   list can show either the last folder of a workspace path or the full path.
   Exposed as "会话列表路径显示" in the settings tab.
+- `/status` (`/状态`, `/代理`): a Typst-rendered image of the main agent, team
+  members or plain subagents, and running background jobs.
+- `/tasks` (`/任务`, `/任务管理`, `/schedule`): a Typst-rendered image of the
+  host's scheduled/automation tasks (`ctx.schedule.catalog()`), including rule,
+  status, planned time and bound session.
+- `/jobs` (`/后台任务`): running background jobs; only registered/listed when
+  the official persistent terminal (`@deepseek-ai/dsh-terminal`, `ctx.terminals`)
+  is enabled. Menu/help entries adapt to the detected official plugins.
 
 ### Changed
 
@@ -18,8 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `standard` → 标准模式, `ptc` → PTC 模式, `minimal` → 极简模式,
   `cordis` → 创造模式; `read-only` → 只读, `workspace-write` → 工作区写入,
   `danger-full-access` → 全系统. Custom presets fall back to their DSH name.
-- Tests: 250 total (247 pass + 2 new bridge cases + 1 skipped), covering path
-  modes and label fallbacks.
+- When Agent Teams is enabled, `/status` renders its roster (Lead + teammates,
+  role and live status); without it, plain `ctx.subagents` children are shown.
+- Tests: 259 total (258 pass, 1 skipped), covering path modes, label fallbacks,
+  schedule formatting, team/job capability gating and conditional menu items.
 
 ## [0.2.1] - 2026-10-28
 
