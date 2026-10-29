@@ -89,13 +89,15 @@ jobs:
 
       - name: Publish to npmjs (trusted publishing)
         shell: bash
+        env:
+          # setup-node injects NODE_AUTH_TOKEN; clear it so npm must use OIDC.
+          NODE_AUTH_TOKEN: ''
+          NPM_CONFIG_USERCONFIG: ${{ github.workspace }}/.npmrc-oidc
         run: |
           set -euo pipefail
-          # OIDC must be the only credential: a token would silently win over it.
-          NPMRC="${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
-          if [ -f "${NPMRC}" ]; then
-            sed -i '/_authToken/d' "${NPMRC}"
-          fi
+          # Give npm a clean user config with no credentials at all.
+          : > "${NPM_CONFIG_USERCONFIG}"
+          echo "registry=https://registry.npmjs.org/" >> "${NPM_CONFIG_USERCONFIG}"
           if [ -n "${NODE_AUTH_TOKEN:-}" ]; then
             echo "::error::NODE_AUTH_TOKEN must not be set; npm trusted publishing uses OIDC."
             exit 1
@@ -135,16 +137,19 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          NPMRC="${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
+          # The npmjs step pointed NPM_CONFIG_USERCONFIG at a scratch file; give
+          # GitHub Packages its own config so OIDC and token auth never mix.
           {
+            echo "registry=https://npm.pkg.github.com/"
             echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}"
             echo "@${OWNER}:registry=https://npm.pkg.github.com/"
-          } >> "${NPMRC}"
+          } > "${GITHUB_WORKSPACE}/.npmrc-ghpkg"
 
       - name: Publish to GitHub Packages
         shell: bash
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_CONFIG_USERCONFIG: ${{ github.workspace }}/.npmrc-ghpkg
         run: |
           set -euo pipefail
           PKG="@${OWNER}/dsh-adapter-qq"
@@ -163,3 +168,4 @@ jobs:
           fi
           npm publish "${TGZ}" \
             --registry=https://npm.pkg.github.com/
+          echo "### ✅ Published ${PKG}@${VERSION} to GitHub Packages" >> "${GITHUB_STEP_SUMMARY}"
