@@ -27,7 +27,7 @@ const sessionManager = {
   },
 };
 
-function fakeCtx({ team, terminal = true, children = [], jobs = {}, agents = {} }) {
+function fakeCtx({ team, terminal = true, children = [], jobs = {}, agents = {}, scoped }) {
   const services = {
     agents: { get: (id) => agents[id] },
     subagents: { listChildren: async () => children },
@@ -39,6 +39,15 @@ function fakeCtx({ team, terminal = true, children = [], jobs = {}, agents = {} 
         }
       : undefined,
   };
+  if (scoped) {
+    const main = agents['sess-main'] || {};
+    services.agents = {
+      get: (id) =>
+        id === 'sess-main'
+          ? { ...main, ctx: { get: (name) => scoped[name] } }
+          : agents[id],
+    };
+  }
   return { get: (name) => services[name] };
 }
 
@@ -157,5 +166,65 @@ describe('collectAgentOverview capability gating', () => {
     assert.equal(overview.children.length, 1);
     assert.equal(overview.children[0].label, 'helper');
     assert.deepEqual(overview.jobs, []);
+  });
+
+  it('detects the persistent terminal from its tools when the service is isolated', async () => {
+    const overview = await collectAgentOverview({
+      ctx: fakeCtx({
+        terminal: false,
+        agents: { 'sess-main': { status: 'running' } },
+        scoped: {
+          tools: { get: (name) => (name === 'terminal_send' ? { name } : undefined) },
+          jobs: {
+            list: (sessionId) =>
+              sessionId === 'sess-main'
+                ? [{ id: 'bash-7', label: 'pwsh watch', kind: 'bash', status: 'running', startedAt: Date.now() }]
+                : [],
+          },
+        },
+      }),
+      sessionManager,
+    });
+    assert.equal(overview.terminalEnabled, true);
+    assert.equal(overview.jobs.length, 1);
+  });
+
+  it('detects isolated terminals via the agent context and maps preset/permission/status', async () => {
+    const overview = await collectAgentOverview({
+      ctx: fakeCtx({
+        terminal: false, // host context cannot see the isolated terminal service
+        agents: { 'sess-main': { status: 'idle' } },
+        scoped: {
+          terminals: { list: () => [] },
+          jobs: {
+            list: (sessionId) =>
+              sessionId === 'sess-main'
+                ? [{ id: 'bash-9', label: 'pwsh watch', kind: 'bash', status: 'running', startedAt: Date.now() }]
+                : [],
+          },
+        },
+      }),
+      sessionManager: {
+        async getActiveSessionInfo() {
+          return {
+            sessionId: 'sess-main',
+            title: '主会话',
+            cwd: 'W:/work/app',
+            agentPreset: 'cordis',
+            permission: 'danger-full-access',
+            running: false,
+          };
+        },
+        async getModelCatalog() {
+          return { current: { model: 'deepseek-v4', provider: 'gateway' } };
+        },
+      },
+    });
+    assert.equal(overview.terminalEnabled, true);
+    assert.equal(overview.main.preset, '创造模式');
+    assert.equal(overview.main.permission, '全系统');
+    assert.equal(overview.main.status, '💤 空闲');
+    assert.equal(overview.jobs.length, 1);
+    assert.equal(overview.jobs[0].label, 'pwsh watch');
   });
 });

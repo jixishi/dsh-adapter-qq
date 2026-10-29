@@ -28,8 +28,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `danger-full-access` → 全系统. Custom presets fall back to their DSH name.
 - When Agent Teams is enabled, `/status` renders its roster (Lead + teammates,
   role and live status); without it, plain `ctx.subagents` children are shown.
-- Tests: 259 total (258 pass, 1 skipped), covering path modes, label fallbacks,
-  schedule formatting, team/job capability gating and conditional menu items.
+- Session list groups all sessions of one workspace into a single `>` quote
+  block, so the list reads as workspace → sessions instead of a flat list.
+- `/current` and `/status` now map preset/permission ids to readable names, and
+  `/status` maps `idle` to 💤 空闲.
+- Persistent-terminal detection also checks the live Agent context and the
+  `terminal_send`/`terminal_open` tools, because `@deepseek-ai/dsh-terminal`
+  lives in `isolate: { terminals: true }` and is invisible to the host context.
+- Tests: 261 total (260 pass, 1 skipped), covering path modes, label fallbacks,
+  schedule formatting, team/job capability gating, isolated-terminal detection
+  and conditional menu items.
 
 ## [0.2.1] - 2026-10-28
 

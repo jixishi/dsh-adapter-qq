@@ -33,7 +33,8 @@
 - 🗂️ **分页会话列表 + emoji 会话标识**：
   - 会话列表跨工作区展平分页（默认每页 6 个，可配置），每页内为每个会话分配**互不重复的 emoji**（🍎🍊🍋…）作为按键标识，列表里在会话名后附加同一 emoji。
   - 工作区路径可按配置显示**完整路径**或**仅最后一级文件夹**（`sessionPathDisplay`，默认 `tail`）。
-  - 会话名后的预设/权限使用可读名称（如 `标准模式` / `工作区写入`），不再直接显示 `standard` / `workspace-write` 这类 ID；自定义预设仍显示其 DSH 名称。
+  - 同一工作区下的会话合并为一个 **`>` 引用块**，形成「工作区 → 会话」的层级；会话名后的预设/权限使用可读名称（如 `标准模式` / `工作区写入`），不再直接显示 `standard` / `workspace-write` 这类 ID；自定义预设仍显示其 DSH 名称。
+  - `/current` 的预设/权限同样使用可读名称。
   - 支持点击按键、`/switch <序号>`、`/switch <emoji>`、`/switch <标题关键字>` 三种切换方式。
 - 🧭 **任务与代理状态图片（Typst 渲染）**：
   - `/status`（`/状态`、`/代理`）：一张图查看**主代理**状态（标题/模型/预设/权限/目录）、团队成员或子代理状态，以及正在进行的后台任务。
@@ -298,14 +299,14 @@ pnpm test
 ✔ QQ scan-to-bind protocol (11 tests passed)
 ✔ ApprovalHandler / multi-question (5 tests passed)
 ✔ MessageBridge (27 tests passed)
-✔ Task overview (8 tests passed)
+✔ Task overview (10 tests passed)
 ✔ Render engines (33 passed, 1 skipped)
 ✔ Typst engine / markdown conversion (6 tests passed)
 ✔ qq_render_text_image tool (14 tests passed)
 ✔ AdminInventory (27 tests passed)
 ✔ qq_send_file tool (20 tests passed)
-ℹ tests 259
-ℹ pass 258
+ℹ tests 261
+ℹ pass 260
 ℹ skipped 1
 ℹ fail 0
 ```

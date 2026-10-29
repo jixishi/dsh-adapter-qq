@@ -255,8 +255,11 @@ describe('MessageBridge', () => {
     assert.ok(last.msg.markdown.includes('📁 **qq-bot**'));
     assert.ok(last.msg.markdown.includes('开发需求单'));
     // Default path mode is the final folder only
-    assert.ok(last.msg.markdown.includes('└ 路径: `qq-bot`'));
+    assert.ok(last.msg.markdown.includes('  └ 路径: `qq-bot`'));
     assert.ok(!last.msg.markdown.includes('F:/dsh-plugin/qq-bot'));
+    // Sessions are one `>` quote block under the workspace
+    assert.ok(last.msg.markdown.includes('> 1.'));
+    assert.ok(last.msg.markdown.includes('> 2.'));
     // Preset/permission ids are mapped to human labels
     assert.ok(last.msg.markdown.includes('[`标准模式` | `工作区写入`]'));
     assert.ok(last.msg.markdown.includes('[`PTC 模式` | `工作区写入`]'));
@@ -279,7 +282,7 @@ describe('MessageBridge', () => {
     await new Promise((r) => setTimeout(r, 15));
 
     const markdown = harness.sentMessages[0].msg.markdown;
-    assert.ok(markdown.includes('└ 路径: `F:/dsh-plugin/qq-bot`'));
+    assert.ok(markdown.includes('  └ 路径: `F:/dsh-plugin/qq-bot`'));
     harness.bridge.stop();
   });
 
