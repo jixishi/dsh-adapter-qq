@@ -14,6 +14,13 @@
 > **兼容性**：面向 **DSH 0.2.1-rc.3**（`engines.dsh: >=0.2.1-rc.3 <0.3.0`），Node.js ≥ 20。
 > 已适配 DSH 0.2.1 的 `SessionPromptRequest.mode`（`queue`/`steer`）、`ApprovalRequestEvent.agent`、`permissionPresets.catalog()`、`skills` 服务与 `sessionTitle`/`sessionQuery` 标题读取；旧版本 DSH 不再保证兼容。
 
+## 🆕 0.2.2 更新摘要
+
+- **会话列表**：新增 `sessionPathDisplay`（完整路径 / 仅末级文件夹）；同一工作区下的会话合并为 `>` 引用块层级；预设/权限显示可读名称，冷会话从已持久化的 `permissions` 投影推导。
+- **新指令**：`/status`（主代理/团队/子代理 + 后台任务图）、`/tasks`（定时任务图）、`/jobs`（持久终端启用时自动注册）、`/usage`（检测到 `@kenz1117/dsh-ui-usage-billing` 时自动注册）。
+- **渲染**：`/usage` 使用专用 Typst 卡片（费用大数字卡、预算进度条、模型/站点占比条）；`/status` 与 `/tasks` 复用内嵌 Typst。
+- **修复**：QQ 引用块前置空行、`idle`/`unknown` 中文映射、任务/状态菜单合并避免超过 QQ 10 项上限。
+
 ---
 
 ## 🌟 核心特性
