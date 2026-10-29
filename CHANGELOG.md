@@ -29,15 +29,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - When Agent Teams is enabled, `/status` renders its roster (Lead + teammates,
   role and live status); without it, plain `ctx.subagents` children are shown.
 - Session list groups all sessions of one workspace into a single `>` quote
-  block, so the list reads as workspace → sessions instead of a flat list.
-- `/current` and `/status` now map preset/permission ids to readable names, and
-  `/status` maps `idle` to 💤 空闲.
-- Persistent-terminal detection also checks the live Agent context and the
-  `terminal_send`/`terminal_open` tools, because `@deepseek-ai/dsh-terminal`
-  lives in `isolate: { terminals: true }` and is invisible to the host context.
-- Tests: 261 total (260 pass, 1 skipped), covering path modes, label fallbacks,
+  block, with a blank line before the block so QQ's Markdown parser renders it
+  as a quote instead of literal `>` characters.
+- `/current` and `/status` now map preset/permission ids to readable names
+  (`unknown` → 未知), and `/status` maps `idle` to 💤 空闲.
+- Persistent-terminal detection also checks the live Agent context, the
+  `terminal_send`/`terminal_open` tools, and finally the Loader tree /
+  `pluginInventory` — because `@deepseek-ai/dsh-terminal` lives in
+  `isolate: { terminals: true }` and is invisible to the host context.
+- Tests: 262 total (261 pass, 1 skipped), covering path modes, label fallbacks,
   schedule formatting, team/job capability gating, isolated-terminal detection
-  and conditional menu items.
+  via Agent context/tools/Loader inventory, and conditional menu items.
 
 ## [0.2.1] - 2026-10-28
 

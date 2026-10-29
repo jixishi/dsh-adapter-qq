@@ -299,14 +299,14 @@ pnpm test
 ✔ QQ scan-to-bind protocol (11 tests passed)
 ✔ ApprovalHandler / multi-question (5 tests passed)
 ✔ MessageBridge (27 tests passed)
-✔ Task overview (10 tests passed)
+✔ Task overview (11 tests passed)
 ✔ Render engines (33 passed, 1 skipped)
 ✔ Typst engine / markdown conversion (6 tests passed)
 ✔ qq_render_text_image tool (14 tests passed)
 ✔ AdminInventory (27 tests passed)
 ✔ qq_send_file tool (20 tests passed)
-ℹ tests 261
-ℹ pass 260
+ℹ tests 262
+ℹ pass 261
 ℹ skipped 1
 ℹ fail 0
 ```

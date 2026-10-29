@@ -9,6 +9,7 @@ import {
   describeScheduleRule,
   formatDuration,
   formatDateTime,
+  hasTerminalPlugin,
 } from '../lib/sync/task-overview.js';
 
 const sessionManager = {
@@ -226,5 +227,35 @@ describe('collectAgentOverview capability gating', () => {
     assert.equal(overview.main.status, '💤 空闲');
     assert.equal(overview.jobs.length, 1);
     assert.equal(overview.jobs[0].label, 'pwsh watch');
+  });
+
+  it('detects the persistent terminal from the loader tree or plugin inventory', async () => {
+    const loaderCtx = {
+      get: (name) =>
+        name === 'loader'
+          ? {
+              entries: () => [
+                {
+                  options: { name: 'cordis:group', group: true },
+                  children: [
+                    { options: { name: '@deepseek-ai/dsh-terminal' }, disabled: false },
+                    { options: { name: '@deepseek-ai/dsh-terminal-bash' }, disabled: false },
+                  ],
+                },
+              ],
+            }
+          : undefined,
+    };
+    assert.equal(await hasTerminalPlugin(loaderCtx), true);
+
+    const inventoryCtx = {
+      get: (name) =>
+        name === 'pluginInventory'
+          ? { list: async () => ({ entries: [{ moduleName: '@deepseek-ai/dsh-terminal', enabled: true, fiberPhase: 'active' }] }) }
+          : undefined,
+    };
+    assert.equal(await hasTerminalPlugin(inventoryCtx), true);
+
+    assert.equal(await hasTerminalPlugin({ get: () => undefined }), false);
   });
 });

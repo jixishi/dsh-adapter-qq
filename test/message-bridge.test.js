@@ -257,8 +257,8 @@ describe('MessageBridge', () => {
     // Default path mode is the final folder only
     assert.ok(last.msg.markdown.includes('  └ 路径: `qq-bot`'));
     assert.ok(!last.msg.markdown.includes('F:/dsh-plugin/qq-bot'));
-    // Sessions are one `>` quote block under the workspace
-    assert.ok(last.msg.markdown.includes('> 1.'));
+    // Sessions are one `>` quote block under the workspace (blank line before it)
+    assert.ok(last.msg.markdown.includes('\n\n> 1.'));
     assert.ok(last.msg.markdown.includes('> 2.'));
     // Preset/permission ids are mapped to human labels
     assert.ok(last.msg.markdown.includes('[`标准模式` | `工作区写入`]'));
@@ -295,6 +295,7 @@ describe('MessageBridge', () => {
     assert.equal(resolvePresetLabel('my-preset', [{ id: 'my-preset', name: '我的预设' }]), '我的预设');
     assert.equal(resolvePresetLabel('unknown'), 'unknown');
     assert.equal(resolvePermissionLabel('read-only'), '只读');
+    assert.equal(resolvePermissionLabel('unknown'), '未知');
     assert.equal(resolvePermissionLabel('custom-perm', [{ id: 'custom-perm', name: '自定义权限' }]), '自定义权限');
     assert.equal(resolvePermissionLabel(''), '默认');
   });
