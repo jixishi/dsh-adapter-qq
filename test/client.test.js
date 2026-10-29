@@ -100,25 +100,30 @@ describe('QQApiClient', () => {
 
   it('should add status/tasks/jobs menu entries only when official plugins are enabled', () => {
     const client = new QQApiClient({ appId: '123', clientSecret: 'sec' });
-    const plain = client.getDefaultMenu().items.map((item) => item.send_message).filter(Boolean);
+    const targetsOf = (menu) =>
+      menu.items.flatMap((item) =>
+        item.type === 'menu' ? item.sub_menu_items.map((sub) => sub.send_message) : [item.send_message]
+      );
+
+    const plain = targetsOf(client.getDefaultMenu());
     assert.ok(!plain.includes('/status'));
     assert.ok(!plain.includes('/tasks'));
     assert.ok(!plain.includes('/jobs'));
 
-    const full = client
-      .getDefaultMenu({ team: true, schedule: true, terminal: true })
-      .items.map((item) => item.send_message)
-      .filter(Boolean);
+    const fullMenu = client.getDefaultMenu({ team: true, schedule: true, terminal: true, usage: true });
+    const full = targetsOf(fullMenu);
     assert.ok(full.includes('/status'));
     assert.ok(full.includes('/tasks'));
     assert.ok(full.includes('/jobs'));
+    assert.ok(full.includes('/usage'));
+    assert.ok(fullMenu.items.length <= 10, 'top-level menu items must stay <= 10');
 
-    const terminalOnly = client
-      .getDefaultMenu({ terminal: true })
-      .items.map((item) => item.send_message)
-      .filter(Boolean);
+    const terminalOnly = targetsOf(client.getDefaultMenu({ terminal: true }));
     assert.ok(terminalOnly.includes('/jobs'));
     assert.ok(!terminalOnly.includes('/tasks'));
+
+    const usageOnly = targetsOf(client.getDefaultMenu({ usage: true }));
+    assert.ok(usageOnly.includes('/usage'));
   });
 
   it('should expose skills, MCP and render shortcuts in the default menu', () => {

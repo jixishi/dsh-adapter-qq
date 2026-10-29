@@ -40,12 +40,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Cold sessions now derive their permission preset from the persisted
   `permissions` session projection (`permissionPresets.derive()`), so the
   session list no longer shows 未知 for sessions without a live Agent.
+- Optional usage-billing integration: when `@kenz1117/dsh-ui-usage-billing` is
+  installed, `/usage` (用量/费用/账单) is auto-registered, reads the loopback
+  `GET /api/billing/usage-stats`, and renders today/month/total cost plus
+  model/site tops as a Typst image; the bottom menu and `/help` add the entry
+  only when the plugin is detected.
 - Docs: refreshed `docs/images/workspace-sessions.png` with the quote-block
   hierarchy and added `docs/images/agent-status.png` for `/status`.
-- Tests: 262 total (261 pass, 1 skipped), covering path modes, label fallbacks,
+- Tests: 269 total (268 pass, 1 skipped), covering path modes, label fallbacks,
   schedule formatting, team/job capability gating, isolated-terminal detection
   via Agent context/tools/Loader inventory, cold-session permission derivation,
-  and conditional menu items.
+  usage-billing detection/fetch/format, and conditional menu items.
 
 ## [0.2.1] - 2026-10-28
 
