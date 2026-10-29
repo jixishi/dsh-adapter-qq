@@ -18,6 +18,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `sendOverviewCaption` setting (default **off**): `/usage`, `/status`, `/tasks`
   and `/jobs` no longer send a trailing text block after the image; enable it in
   the settings tab to restore the caption.
+- `/stats`（`/统计`）now renders a dedicated Typst card — eight metric cards
+  (turns, steps, LLM time, tool time, TTFT, decode speed, cache-hit rate, total
+  tokens) plus a token breakdown table with a cache bar — instead of plain text.
+- The QQ bottom menu gains parameterised presets generated from live data: a
+  「模型与思考」submenu uses the **current model's** reasoning efforts
+  (`/effort off|low|medium|high|xhigh|max`) and a 「权限模式」submenu lists every
+  configured permission preset (`/permission read-only|workspace-write|…`). The
+  interactive `/effort` and `/permission` commands stay as the first submenu
+  entry, and `/menu` re-registers the presets on demand.
 - CI: `.github/workflows/publish.yml` publishes on `v*` tags (and manual
   dispatch) to npmjs (`dsh-adapter-qq`) and GitHub Packages
   (`@<owner>/dsh-adapter-qq`), with tag/version validation, duplicate-version

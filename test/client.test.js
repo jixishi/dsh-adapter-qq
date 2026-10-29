@@ -126,6 +126,46 @@ describe('QQApiClient', () => {
     assert.ok(usageOnly.includes('/usage'));
   });
 
+  it('builds parameterised reasoning and permission presets from live data', () => {
+    const client = new QQApiClient({ appId: '123', clientSecret: 'sec' });
+    const menu = client.getDefaultMenu({
+      efforts: [
+        { id: 'off', name: '关闭' },
+        { id: 'low', name: '低' },
+        { id: 'medium', name: '中' },
+        { id: 'high', name: '高' },
+        { id: 'xhigh', name: '超高' },
+      ],
+      permissions: [
+        { id: 'read-only', name: '只读' },
+        { id: 'workspace-write', name: '工作区写入' },
+        { id: 'danger-full-access', name: '全系统' },
+      ],
+    });
+
+    const modelMenu = menu.items.find((item) => item.name === '模型与思考');
+    assert.ok(modelMenu, 'model/reasoning submenu must exist');
+    const modelTargets = modelMenu.sub_menu_items.map((item) => item.send_message);
+    assert.ok(modelTargets.includes('/model'));
+    assert.ok(modelTargets.includes('/effort high'));
+    assert.ok(modelMenu.sub_menu_items.length <= 5, 'submenu keeps QQ 5-item limit');
+
+    const permissionMenu = menu.items.find((item) => item.name === '权限模式');
+    assert.ok(permissionMenu, 'permission submenu must exist');
+    const permissionTargets = permissionMenu.sub_menu_items.map((item) => item.send_message);
+    assert.ok(permissionTargets.includes('/permission'), 'interactive command is preserved');
+    assert.ok(permissionTargets.includes('/permission workspace-write'));
+    assert.ok(permissionMenu.sub_menu_items.length <= 5);
+
+    assert.ok(menu.items.length <= 10, 'top level stays within QQ limit');
+    for (const item of menu.items) {
+      assert.ok(item.name.length <= 10, `top name "${item.name}" must fit 10 chars`);
+      for (const sub of item.sub_menu_items || []) {
+        assert.ok(sub.name.length <= 14, `sub name "${sub.name}" must fit 14 chars`);
+      }
+    }
+  });
+
   it('should expose skills, MCP and render shortcuts in the default menu', () => {
     const client = new QQApiClient({ appId: '123', clientSecret: 'sec' });
     const menu = client.getDefaultMenu();
@@ -136,7 +176,7 @@ describe('QQApiClient', () => {
     assert.ok(targets.includes('/skills'), 'top level menu must include /skills');
     assert.ok(targets.includes('/mcp'), 'top level menu must include /mcp');
 
-    const shortcuts = menu.items.find((item) => item.type === 'menu');
+    const shortcuts = menu.items.find((item) => item.name === '快捷操作');
     assert.ok(shortcuts, 'quick action sub menu must exist');
     const shortcutTargets = shortcuts.sub_menu_items.map((item) => item.send_message);
     assert.ok(shortcutTargets.includes('/render'), 'quick actions must include /render');

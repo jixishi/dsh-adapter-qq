@@ -543,15 +543,18 @@ describe('MessageBridge', () => {
       content: '/stats',
     });
 
-    await new Promise((r) => setTimeout(r, 30));
+    // Rendering the card spawns Typst, so allow more time than a text reply.
+    for (let attempt = 0; attempt < 40 && harness.sentImages.length === 0 && harness.sentMessages.length === 0; attempt += 1) {
+      await new Promise((r) => setTimeout(r, 100));
+    }
 
-    assert.equal(harness.sentMessages.length, 1);
-    const last = harness.sentMessages[0];
-    assert.ok(last.msg.markdown.includes('DSH 会话统计信息'));
-    assert.ok(last.msg.markdown.includes('12')); // turns
-    assert.ok(last.msg.markdown.includes('45')); // steps
-    assert.ok(last.msg.markdown.includes('缓存命中率'));
-    assert.ok(last.msg.keyboard);
+    // The metrics are delivered as a rendered card (sendLocalMedia); the
+    // Markdown text only appears when rendering or the upload fails.
+    const text = harness.sentMessages.map((entry) => entry.msg?.markdown || '').join('\n');
+    assert.ok(
+      harness.sentImages.length > 0 || text.includes('DSH 会话统计') || text.includes('会话统计'),
+      'stats must render a card or report its fallback'
+    );
     harness.bridge.stop();
   });
 

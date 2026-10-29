@@ -16,8 +16,10 @@
 
 ## 🆕 0.2.3 更新摘要
 
+- **`/stats` 统计卡片**：会话统计改为 Typst 卡片（8 张指标卡 + Token 明细表），与 `/usage` 视觉统一。
+- **菜单动态预设**：底部菜单新增「模型与思考」「权限模式」子菜单，按**当前模型**的思考等级与已配置权限**动态生成带参数项**（`/effort high`、`/permission workspace-write`）；原交互式 `/effort`、`/permission` 保留。
 - **`/usage` 范围与可视化**：`/usage 日|月|年|累计`（默认本月）；费用/调用/Token/平均成本/缓存命中率/输入输出比/思考占比/峰值日统计卡片；最近 30 天费用热力图；模型名取计费目录显示名，站点名取中转登记名称，未登记域名脱敏。
-- **图片说明默认关闭**：`/usage`、`/status`、`/tasks`、`/jobs` 发完图片后不再补发文字块；需要时在设置中开启 `sendOverviewCaption`。
+- **图片说明默认关闭**：`/usage`、`/status`、`/tasks`、`/jobs`、`/stats` 发完图片后不再补发文字块；需要时在设置中开启 `sendOverviewCaption`。
 - **CI 自动发布**：`.github/workflows/publish.yml` 在 `v*` tag 或手动触发时先测试，再发布 npmjs 与 GitHub Packages（GitHub Packages 使用 `@<owner>/dsh-adapter-qq` 作用域副本）。
 - **此前 0.2.2 能力**：会话列表引用块层级、路径/预设/权限可读名称、`/status` `/tasks` `/jobs`、官方扫码绑定。
 
@@ -93,9 +95,9 @@
 | <img src="docs/images/approval-sync.png" width="360" alt="双向权限审批" /> | <img src="docs/images/tool-execution.png" width="360" alt="工具调用执行" /> |
 | **QQ 与 Web UI 实时互斥结算，绝不悬挂** | **工具执行进度秒级感知，多操作自动聚合防刷屏** |
 
-| 5. 会话统计数据 (`/stats` 对齐 WebUI) | 6. 模型选择与翻页 (`/model` 操作板) |
+| 5. 会话统计数据 (`/stats` 统计卡片) | 6. 模型选择与翻页 (`/model` 操作板) |
 | :---: | :---: |
-| <img src="docs/images/mobile-stats.jpg" width="360" alt="会话统计数据" /> | <img src="docs/images/mobile-model.jpg" width="360" alt="模型切换操作板" /> |
+| <img src="docs/images/session-stats.png" width="360" alt="统计卡片" /> | <img src="docs/images/mobile-model.jpg" width="360" alt="模型切换操作板" /> |
 | **轮次、步数、LLM耗时、TTFT及缓存命中率** | **支持多供应商模型识别与上一页/下一页翻页** |
 
 | 7. 思考等级管理 (`/effort` 操作板) | 8. QQ 图片同步至 Web UI 聊天气泡 |
@@ -239,7 +241,7 @@ dsh plugin --profile web add github:jixishi/dsh-adapter-qq
 | `/model` | 查看当前会话模型及所有可用模型列表，附带一键切换操作板 |
 | `/model <名称或序号> [供应商]` | 为当前会话切换 AI 模型（如 `/model gpt-5.6-luna` 或 `/model 2`） |
 | `/effort [等级]` 或 `/思考` | 查看或切换思考等级（`off`, `low`, `medium`, `high`, `xhigh`, `max`），附带操作板 |
-| `/stats` 或 `/统计` | 查看当前会话统计信息（轮次/步数、LLM耗时、首字延迟、解码速度、缓存命中率、Token用量，对齐 WebUI 底栏） |
+| `/stats` 或 `/统计` | 以 **Typst 统计卡片** 图片展示当前会话统计（轮次/步数、LLM/工具耗时、首字延迟、生成速度、缓存命中率、Token 明细），对齐 WebUI 底栏 |
 | `/preset` | 显示当前预设及所有动态获取的可用预设列表（内置 + 自定义），附带切换按钮 |
 | `/preset <名称>` | 为当前会话切换预设（如 `/preset ptc`，未产生交互前可换） |
 | `/permission` | 显示当前权限级别及切换操作板 |
@@ -306,7 +308,7 @@ pnpm test
 
 测试结果（DSH 0.2.1-rc.3 / Node 26，本机无头浏览器受限时浏览器用例会跳过）：
 ```text
-✔ QQApiClient (21 tests passed)
+✔ QQApiClient (22 tests passed)
 ✔ QQ media helpers (35 tests passed)
 ✔ KeyboardBuilder (19 tests passed)
 ✔ Session emoji palette (5 tests passed)
@@ -322,8 +324,8 @@ pnpm test
 ✔ qq_render_text_image tool (14 tests passed)
 ✔ AdminInventory (27 tests passed)
 ✔ qq_send_file tool (20 tests passed)
-ℹ tests 276
-ℹ pass 275
+ℹ tests 277
+ℹ pass 276
 ℹ skipped 1
 ℹ fail 0
 ```
