@@ -96,6 +96,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   (`@<owner>/dsh-adapter-qq`), with tag/version validation, duplicate-version
   skipping, and a scoped tarball prepared by
   `.github/scripts/prepare-gh-package.mjs`.
+- CI: npmjs publishing uses **npm trusted publishing (OIDC)** instead of a
+  long-lived `NPM_TOKEN` — the workflow declares `id-token: write`, verifies the
+  npm CLI is ≥ 11.5.1, strips any `_authToken` from `.npmrc`, and fails fast if
+  `NODE_AUTH_TOKEN` is present so a token cannot silently override OIDC.
 - Tests: 271 total (270 pass, 1 skipped), covering path modes, label fallbacks,
   schedule formatting, team/job capability gating, isolated-terminal detection
   via Agent context/tools/Loader inventory, cold-session permission derivation,

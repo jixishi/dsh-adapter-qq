@@ -10,9 +10,12 @@ concurrency:
   group: publish-${{ github.ref }}
   cancel-in-progress: false
 
+# `id-token: write` is what lets npm exchange a GitHub OIDC token for a
+# short-lived publish credential (npm trusted publishing, no long-lived token).
 permissions:
   contents: read
   packages: write
+  id-token: write
 
 jobs:
   publish:
@@ -23,7 +26,7 @@ jobs:
       NPM_CONFIG_AUDIT: 'false'
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -31,10 +34,26 @@ jobs:
           version: 10
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 24
-          cache: pnpm
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+          # Release builds must not reuse a package-manager cache.
+          package-manager-cache: false
+
+      - name: Verify npm CLI supports trusted publishing
+        shell: bash
+        run: |
+          set -euo pipefail
+          NPM_VERSION="$(npm --version)"
+          echo "npm ${NPM_VERSION}"
+          node -e '
+            const [major, minor] = process.argv[1].split(".").map(Number);
+            if (major < 11 || (major === 11 && minor < 5)) {
+              console.error(`npm >= 11.5.1 is required for trusted publishing, found ${process.argv[1]}`);
+              process.exit(1);
+            }
+          ' "${NPM_VERSION}"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -68,42 +87,34 @@ jobs:
           echo "NPM_TGZ=dist/${TGZ}" >> "${GITHUB_ENV}"
           echo "Packed ${TGZ}"
 
-      - name: Configure npm auth
+      - name: Publish to npmjs (trusted publishing)
         shell: bash
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          if [ -z "${NPM_TOKEN:-}" ]; then
-            echo "::warning::NPM_TOKEN secret is not set; npmjs publish will be skipped."
+          # OIDC must be the only credential: a token would silently win over it.
+          NPMRC="${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
+          if [ -f "${NPMRC}" ]; then
+            sed -i '/_authToken/d' "${NPMRC}"
           fi
-          {
-            echo "registry=https://registry.npmjs.org/"
-            echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN:-}"
-            echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}"
-            echo "@${OWNER}:registry=https://npm.pkg.github.com/"
-          } > .npmrc
-
-      - name: Publish to npmjs
-        shell: bash
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          set -euo pipefail
-          if [ -z "${NPM_TOKEN:-}" ]; then
-            echo "Skipping npmjs publish (NPM_TOKEN is not configured)."
-            echo "### ⚠️ npmjs publish skipped" >> "${GITHUB_STEP_SUMMARY}"
-            echo "Set the repository secret \`NPM_TOKEN\` and re-run this workflow to publish \`dsh-adapter-qq@${VERSION}\`." >> "${GITHUB_STEP_SUMMARY}"
-            exit 0
+          if [ -n "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "::error::NODE_AUTH_TOKEN must not be set; npm trusted publishing uses OIDC."
+            exit 1
           fi
+          if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ]; then
+            echo "::error::No OIDC token endpoint. Grant 'id-token: write' to this workflow."
+            exit 1
+          fi
+          echo "Publishing dsh-adapter-qq@${VERSION} with npm $(npm --version) via OIDC"
           if npm view "dsh-adapter-qq@${VERSION}" version --registry=https://registry.npmjs.org/ >/dev/null 2>&1; then
             echo "dsh-adapter-qq@${VERSION} already exists on npmjs; skipping."
+            echo "### npmjs: version already exists" >> "${GITHUB_STEP_SUMMARY}"
             exit 0
           fi
+          # A bare path is parsed as a git shorthand by npm; use ./
           npm publish "./${NPM_TGZ}" \
             --access public \
             --registry=https://registry.npmjs.org/
+          echo "### ✅ Published dsh-adapter-qq@${VERSION} to npmjs" >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Prepare GitHub Packages copy
         run: node .github/scripts/prepare-gh-package.mjs
@@ -118,6 +129,18 @@ jobs:
           echo "GH_TGZ=dist-gh/${TGZ}" >> "${GITHUB_ENV}"
           echo "Packed ${TGZ}"
 
+      - name: Configure GitHub Packages auth
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          NPMRC="${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
+          {
+            echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}"
+            echo "@${OWNER}:registry=https://npm.pkg.github.com/"
+          } >> "${NPMRC}"
+
       - name: Publish to GitHub Packages
         shell: bash
         env:
@@ -129,8 +152,6 @@ jobs:
             echo "::error::GITHUB_TOKEN is required for GitHub Packages."
             exit 1
           fi
-          # A bare path is parsed as a git shorthand by npm; use an explicit ./
-          # prefix so the packed tarball is treated as a local file.
           TGZ="./${GH_TGZ}"
           if [ ! -f "${TGZ}" ]; then
             echo "::error::tarball not found at ${TGZ}"

@@ -337,11 +337,15 @@ pnpm test
 工作流：[`.github/workflows/publish.yml`](.github/workflows/publish.yml)
 
 - **触发**：推送 `v*` tag，或在 Actions → **Publish** → **Run workflow** 手动执行。
-- **流程**：`pnpm install --frozen-lockfile` → `pnpm test` → 校验 tag 与 `package.json` 版本一致 → 打包一次 → 发布 → 同一产物准备 GitHub Packages 副本 → 再发布。
-- **npmjs**：发布 `dsh-adapter-qq@<version>` 到 `https://registry.npmjs.org/`；需要仓库 Secret `NPM_TOKEN`（npm Automation/Granular Token，勾选 publish 权限）。未配置时该步跳过并警告，GitHub Packages 仍会发布。
+- **流程**：`pnpm install --frozen-lockfile` → `pnpm test` → 校验 tag 与 `package.json` 版本一致 → 打包一次 → 发布 npmjs（OIDC）→ 同一产物准备 GitHub Packages 副本 → 再发布。
+- **npmjs（可信发布 / Trusted Publishing）**：发布 `dsh-adapter-qq@<version>` 到 `https://registry.npmjs.org/`，使用 **GitHub OIDC**，不需要 `NPM_TOKEN`。
+  - 前置条件（npm 官方要求）：本仓库 `package.json` 的 `repository.url` 必须与仓库完全一致（当前为 `git+https://github.com/jixishi/dsh-adapter-qq.git`）；workflow 文件名必须与 npmjs.com 上的配置一致（当前 **`publish.yml`**）；workflow 需声明 `permissions: id-token: write`；npm CLI ≥ 11.5.1（workflow 已自动校验）；仅支持 GitHub 托管 runner。
+  - workflow 会先清除 `.npmrc` 中任何 `_authToken`，并在检测到 `NODE_AUTH_TOKEN` 时直接失败——否则 token 会静默覆盖 OIDC。
+  - npmjs.com 的 Trusted Publisher 配置需在 **2 天内完成首次成功发布**才会从 `Pending validation` 转为已生效；过期需删除重建。
+  - 首次发布由 OIDC 自动生成 provenance，无需 `--provenance`。
 - **GitHub Packages**：发布 `@<owner>/dsh-adapter-qq@<version>` 到 `https://npm.pkg.github.com/`，使用自动注入的 `GITHUB_TOKEN`（workflow 已声明 `packages: write`）。GitHub Packages 的 npm registry 只接受**作用域包**，因此 `.github/scripts/prepare-gh-package.mjs` 会在 CI 中把包名与 `cordis.patch.yml` 改成 `@<owner>/dsh-adapter-qq` 后再打包；仓库内的默认包名保持 `dsh-adapter-qq` 不变。
 - **去重**：目标 registry 已存在同版本时自动跳过，重复运行安全。
-- **补发已存在的 tag**：早于本 workflow 的 tag（如 `v0.2.2`）不会自动触发；配置好 `NPM_TOKEN` 后，在 Actions 里手动跑一次 **Publish** 即可补发（版本取自 `package.json`）。`v0.2.3` 起推送 tag 会自动发布。
+- **补发已存在的 tag**：早于本 workflow 的 tag（如 `v0.2.2`）不会自动触发；在 Actions 里手动跑一次 **Publish** 即可补发（版本取自 `package.json`）。
 - **从 GitHub Packages 安装**：`dsh plugin add @<owner>/dsh-adapter-qq@<version>`（作用域副本的 bundle patch 已同步改写）。
 
 ---
