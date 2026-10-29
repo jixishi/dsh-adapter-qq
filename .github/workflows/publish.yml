@@ -1,0 +1,135 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    name: Test and publish
+    runs-on: ubuntu-latest
+    env:
+      NPM_CONFIG_FUND: 'false'
+      NPM_CONFIG_AUDIT: 'false'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Resolve version and owner
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(node -p "require('./package.json').version")"
+          OWNER="$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            TAG="${GITHUB_REF_NAME#v}"
+            if [ "${VERSION}" != "${TAG}" ]; then
+              echo "::error::package.json version ${VERSION} does not match tag ${GITHUB_REF_NAME}"
+              exit 1
+            fi
+          fi
+          echo "VERSION=${VERSION}" >> "${GITHUB_ENV}"
+          echo "OWNER=${OWNER}" >> "${GITHUB_ENV}"
+
+      - name: Pack npm tarball
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          npm pack --pack-destination dist --json > dist/pack.json
+          TGZ="$(node -p "const j=require('./dist/pack.json'); (Array.isArray(j)?j[0]:j[Object.keys(j)[0]]).filename")"
+          echo "NPM_TGZ=dist/${TGZ}" >> "${GITHUB_ENV}"
+          echo "Packed ${TGZ}"
+
+      - name: Configure npm auth
+        shell: bash
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${NPM_TOKEN:-}" ]; then
+            echo "::warning::NPM_TOKEN secret is not set; npmjs publish will be skipped."
+          fi
+          {
+            echo "registry=https://registry.npmjs.org/"
+            echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN:-}"
+            echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}"
+            echo "@${OWNER}:registry=https://npm.pkg.github.com/"
+          } > .npmrc
+
+      - name: Publish to npmjs
+        shell: bash
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${NPM_TOKEN:-}" ]; then
+            echo "Skipping npmjs publish (NPM_TOKEN is not configured)."
+            exit 0
+          fi
+          if npm view "dsh-adapter-qq@${VERSION}" version --registry=https://registry.npmjs.org/ >/dev/null 2>&1; then
+            echo "dsh-adapter-qq@${VERSION} already exists on npmjs; skipping."
+            exit 0
+          fi
+          npm publish "${NPM_TGZ}" \
+            --access public \
+            --registry=https://registry.npmjs.org/
+
+      - name: Prepare GitHub Packages copy
+        run: node .github/scripts/prepare-gh-package.mjs
+
+      - name: Pack GitHub Packages tarball
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist-gh
+          npm pack --pack-destination dist-gh --json > dist-gh/pack.json
+          TGZ="$(node -p "const j=require('./dist-gh/pack.json'); (Array.isArray(j)?j[0]:j[Object.keys(j)[0]]).filename")"
+          echo "GH_TGZ=dist-gh/${TGZ}" >> "${GITHUB_ENV}"
+          echo "Packed ${TGZ}"
+
+      - name: Publish to GitHub Packages
+        shell: bash
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          PKG="@${OWNER}/dsh-adapter-qq"
+          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "::error::GITHUB_TOKEN is required for GitHub Packages."
+            exit 1
+          fi
+          if npm view "${PKG}@${VERSION}" version --registry=https://npm.pkg.github.com/ >/dev/null 2>&1; then
+            echo "${PKG}@${VERSION} already exists on GitHub Packages; skipping."
+            exit 0
+          fi
+          npm publish "${GH_TGZ}" \
+            --registry=https://npm.pkg.github.com/

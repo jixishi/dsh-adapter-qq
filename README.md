@@ -328,6 +328,20 @@ pnpm test
 
 ---
 
+## 📦 自动发布（GitHub Actions）
+
+工作流：[`.github/workflows/publish.yml`](.github/workflows/publish.yml)
+
+- **触发**：推送 `v*` tag，或在 Actions → **Publish** → **Run workflow** 手动执行。
+- **流程**：`pnpm install --frozen-lockfile` → `pnpm test` → 校验 tag 与 `package.json` 版本一致 → 打包一次 → 发布 → 同一产物准备 GitHub Packages 副本 → 再发布。
+- **npmjs**：发布 `dsh-adapter-qq@<version>` 到 `https://registry.npmjs.org/`；需要仓库 Secret `NPM_TOKEN`（npm Automation/Granular Token，勾选 publish 权限）。未配置时该步跳过并警告，GitHub Packages 仍会发布。
+- **GitHub Packages**：发布 `@<owner>/dsh-adapter-qq@<version>` 到 `https://npm.pkg.github.com/`，使用自动注入的 `GITHUB_TOKEN`（workflow 已声明 `packages: write`）。GitHub Packages 的 npm registry 只接受**作用域包**，因此 `.github/scripts/prepare-gh-package.mjs` 会在 CI 中把包名与 `cordis.patch.yml` 改成 `@<owner>/dsh-adapter-qq` 后再打包；仓库内的默认包名保持 `dsh-adapter-qq` 不变。
+- **去重**：目标 registry 已存在同版本时自动跳过，重复运行安全。
+- **手动补发 0.2.2**：`v0.2.2` 是在本 workflow 加入前推送的；配置好 `NPM_TOKEN` 后，在 Actions 里手动跑一次 **Publish** 即可补发（版本取自 `package.json`）。
+- **从 GitHub Packages 安装**：`dsh plugin add @<owner>/dsh-adapter-qq@<version>`（作用域副本的 bundle patch 已同步改写）。
+
+---
+
 ## ❓ 常见问题排查 (Troubleshooting)
 
 1. **收到报错 `11255` 或发消息无响应？**
