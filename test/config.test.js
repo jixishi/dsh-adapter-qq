@@ -16,6 +16,14 @@ describe('QQ adapter Config schema', () => {
     assert.equal(SETTINGS_NAMESPACE, 'adapter-qq');
   });
 
+  it('defaults image captions off and path display to the last folder', () => {
+    assert.equal(DEFAULT_CONFIG.sendOverviewCaption, false);
+    assert.equal(DEFAULT_CONFIG.sessionPathDisplay, 'tail');
+    assert.equal(DEFAULT_CONFIG.autoSendAttachments, true);
+    assert.equal(Config({}).sendOverviewCaption.get(), false);
+    assert.equal(Config({}).sessionPathDisplay.get(), 'tail');
+  });
+
   it('unwraps live volatile refs into plain values', () => {
     const plain = unwrapVolatileConfig({
       appId: { get: () => '102882069' },

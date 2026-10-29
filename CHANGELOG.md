@@ -4,7 +4,25 @@ All notable changes to `dsh-adapter-qq` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.2.3] - 2026-10-29
+
+### Added
+
+- `/usage [日|月|年|累计]`（also `day/month/year/all`, default 本月）aggregates
+  the selected range from `byDay` / `byDayModels` / `byDayModelsSite` and renders
+  a dedicated Typst card with:
+  - stat cards for cost, calls, total tokens, average cost, cache-hit rate,
+    input/output ratio, reasoning share and peak day;
+  - a recent-30-day cost heatmap with legend and 30-day totals;
+  - model and site tables scoped to the selected range.
+- `sendOverviewCaption` setting (default **off**): `/usage`, `/status`, `/tasks`
+  and `/jobs` no longer send a trailing text block after the image; enable it in
+  the settings tab to restore the caption.
+- CI: `.github/workflows/publish.yml` publishes on `v*` tags (and manual
+  dispatch) to npmjs (`dsh-adapter-qq`) and GitHub Packages
+  (`@<owner>/dsh-adapter-qq`), with tag/version validation, duplicate-version
+  skipping, and a scoped tarball prepared by
+  `.github/scripts/prepare-gh-package.mjs`.
 
 ### Fixed
 
@@ -12,6 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `GET /api/billing/pricing` (`flash` → DeepSeek V4.1 Flash, `gemini-3.8-flash`
   → Gemini 3.8 Flash, …), falling back to the raw key when the catalog is
   unavailable.
+- `/usage` site rows now use the registered relay names from
+  `GET /api/billing/relay-quotas` (`CLI Proxy API`, `WorkBuddy`, …); unknown
+  domains are masked (`***.example.org`) instead of exposing the full host.
 
 ## [0.2.2] - 2026-10-29
 

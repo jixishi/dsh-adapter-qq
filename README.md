@@ -3,23 +3,23 @@
 [![Cordis](https://img.shields.io/badge/Cordis-Plugin-blue.svg)](https://github.com/deepseek-ai/deepseek-harness)
 [![QQ Open Platform](https://img.shields.io/badge/QQ%20Open%20Platform-OpenAPI%20v2-green.svg)](https://bot.q.qq.com/wiki/develop/api-v2/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.2.2-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.2.3-blue.svg)](CHANGELOG.md)
 
 `dsh-adapter-qq` 是针对 [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness) 深度定制的 **QQ 官方机器人（C2C 单聊模式）适配器插件**。
 
 通过本插件，你可以在手机或桌面 QQ 聊天窗口中直接与 DSH Agent 进行完整对话，享受 DSH 的全量编码与执行能力（文件读写、Shell 执行、代码运行、子代理、多步规划、工作流），并实现与 **DSH Web UI 实时双向同屏联动**。
 
-> **当前插件版本：0.2.2**。本次更新：会话列表路径可按配置显示**完整路径或仅最后一级文件夹**（`sessionPathDisplay`），会话名后的**预设/权限改为可读名称**；新增 **`/status` 代理与后台任务图**、**`/tasks` 任务管理图**，并在启用官方持久终端时自动注册 **`/jobs`**；安装 `@kenz1117/dsh-ui-usage-billing` 时自动注册 **`/usage` 用量查询**。0.2.1 起支持 **官方扫码绑定**：设置 → 插件 → QQ 机器人 → 「生成绑定二维码」，手机 QQ 扫码后自动填入 AppID / AppSecret / 绑定 OpenID；任何失败都会返回并在界面展示 `code` / `message` / `retcode` / `detail`，不再静默失败。详见 [CHANGELOG.md](./CHANGELOG.md)。
+> **当前插件版本：0.2.3**。本次更新：`/usage [日|月|年|累计]` 支持统计范围切换，新增费用/调用/Token/缓存等**统计卡片**与**最近 30 天用量热力图**；模型名使用计费目录显示名，站点使用中转登记名称并对未知域名脱敏；渲染图片后的文字说明改为**默认关闭**（`sendOverviewCaption`）。此外新增 GitHub Actions 自动发布 npmjs + GitHub Packages。0.2.1 起支持 **官方扫码绑定**：设置 → 插件 → QQ 机器人 → 「生成绑定二维码」。详见 [CHANGELOG.md](./CHANGELOG.md)。
 >
 > **兼容性**：面向 **DSH 0.2.1-rc.3**（`engines.dsh: >=0.2.1-rc.3 <0.3.0`），Node.js ≥ 20。
 > 已适配 DSH 0.2.1 的 `SessionPromptRequest.mode`（`queue`/`steer`）、`ApprovalRequestEvent.agent`、`permissionPresets.catalog()`、`skills` 服务与 `sessionTitle`/`sessionQuery` 标题读取；旧版本 DSH 不再保证兼容。
 
-## 🆕 0.2.2 更新摘要
+## 🆕 0.2.3 更新摘要
 
-- **会话列表**：新增 `sessionPathDisplay`（完整路径 / 仅末级文件夹）；同一工作区下的会话合并为 `>` 引用块层级；预设/权限显示可读名称，冷会话从已持久化的 `permissions` 投影推导。
-- **新指令**：`/status`（主代理/团队/子代理 + 后台任务图）、`/tasks`（定时任务图）、`/jobs`（持久终端启用时自动注册）、`/usage`（检测到 `@kenz1117/dsh-ui-usage-billing` 时自动注册）。
-- **渲染**：`/usage` 使用专用 Typst 卡片（费用大数字卡、预算进度条、模型/站点占比条）；`/status` 与 `/tasks` 复用内嵌 Typst。
-- **修复**：QQ 引用块前置空行、`idle`/`unknown` 中文映射、任务/状态菜单合并避免超过 QQ 10 项上限。
+- **`/usage` 范围与可视化**：`/usage 日|月|年|累计`（默认本月）；费用/调用/Token/平均成本/缓存命中率/输入输出比/思考占比/峰值日统计卡片；最近 30 天费用热力图；模型名取计费目录显示名，站点名取中转登记名称，未登记域名脱敏。
+- **图片说明默认关闭**：`/usage`、`/status`、`/tasks`、`/jobs` 发完图片后不再补发文字块；需要时在设置中开启 `sendOverviewCaption`。
+- **CI 自动发布**：`.github/workflows/publish.yml` 在 `v*` tag 或手动触发时先测试，再发布 npmjs 与 GitHub Packages（GitHub Packages 使用 `@<owner>/dsh-adapter-qq` 作用域副本）。
+- **此前 0.2.2 能力**：会话列表引用块层级、路径/预设/权限可读名称、`/status` `/tasks` `/jobs`、官方扫码绑定。
 
 ---
 
@@ -51,8 +51,9 @@
   - 示例（主代理 + 团队成员 + 后台任务）：
     <img src="docs/images/agent-status.png" width="480" alt="代理与后台任务状态图" />
 - 💰 **用量计费联动（可选）**：
-  - 检测到 `@kenz1117/dsh-ui-usage-billing` 时自动注册 `/usage`（`/用量`、`/费用`、`/账单`），读取本机 `GET /api/billing/usage-stats`，用专用 Typst 卡片渲染费用总览、预算进度、模型/站点占比（模型名取计费目录显示名）。
+  - 检测到 `@kenz1117/dsh-ui-usage-billing` 时自动注册 `/usage [日|月|年|累计]`（`/用量`、`/费用`、`/账单`），读取本机 `/api/billing/usage-stats`、`/pricing` 与 `/relay-quotas`，用专用 Typst 卡片渲染统计卡、30 天热力图、模型/站点分布；模型名取计费目录显示名，站点名取中转登记名称，未知域名脱敏。
   - 未安装时发送 `/usage` 会提示安装方式；底部菜单与 `/help` 仅在检测到该插件时加入「用量」入口。
+  - 图片发送后的文字说明默认关闭（`sendOverviewCaption`），需要时在设置中开启。
   - 示例：<img src="docs/images/usage-billing.png" width="480" alt="用量与费用卡片" />
 - 🖼️ **富媒体收发（图片 / 文件）**：
   - 入站：QQ 转发的图片按**字节魔数**识别真实格式（png/jpeg/gif/webp），修复 `Declared image type does not match its bytes.`；文件自动保存到会话 `uploads/` 并把文本预览/路径交给 Agent。
@@ -200,6 +201,7 @@ dsh plugin --profile web add github:jixishi/dsh-adapter-qq
 | `sessionPageSize` | 会话列表每页数量（QQ 操作板建议 ≤6） | `6` |
 | `sessionPathDisplay` | 会话列表工作区路径显示：`tail` 仅最后一级文件夹 / `full` 完整路径 | `tail` |
 | `autoSendAttachments` | Agent 回复中的图片/文件自动转发到 QQ | `true` |
+| `sendOverviewCaption` | 渲染图片发送后是否再补发文字说明 | `false` |
 | `renderWidth` | 文本渲染图片的像素宽度（480–1600） | `900` |
 | `renderTheme` | 文本渲染图片主题（`light` / `dark`） | `light` |
 | `mcpManagerToken` | `@xxxyz/dsh-mcp-manager` 写操作令牌（可选，密文遮罩；也可用环境变量 `DSH_MCP_MANAGER_TOKEN`） | `""` |
@@ -223,7 +225,7 @@ dsh plugin --profile web add github:jixishi/dsh-adapter-qq
 | `/status` | `/状态`, `/代理` | 图片查看主代理、团队成员（启用 Agent Teams 时）/子代理状态，以及正在进行的后台任务 |
 | `/tasks` | `/任务`, `/任务管理`, `/schedule` | 图片查看 DSH「任务」页的定时/自动化任务（规则、状态、计划时间、绑定会话） |
 | `/jobs` | `/后台任务` | 图片查看运行中的后台任务；仅在启用官方持久终端时自动注册 |
-| `/usage` | `/用量`, `/费用`, `/账单` | 图片查看今日/本月/累计用量与费用、模型/站点 Top；仅在安装 `@kenz1117/dsh-ui-usage-billing` 时自动注册 |
+| `/usage [日\|月\|年\|累计]` | `/用量`, `/费用`, `/账单` | 图片查看指定范围的费用/调用/Token/缓存指标、模型/站点分布与 30 天热力图；仅在安装 `@kenz1117/dsh-ui-usage-billing` 时自动注册 |
 
 #### 新建会话交互向导流程：
 1. **工作区选择 (第 1 步)**：发送 `/new`，操作板展示所有已有工作区（如 `📁 免费:~ (远程)`, `📁 qq-bot`, `📁 AutoAim`）及【🔍 浏览并选择目录】。
@@ -314,14 +316,14 @@ pnpm test
 ✔ ApprovalHandler / multi-question (5 tests passed)
 ✔ MessageBridge (27 tests passed)
 ✔ Task overview (11 tests passed)
-✔ Usage billing integration (9 tests passed)
+✔ Usage billing integration (12 tests passed)
 ✔ Render engines (33 passed, 1 skipped)
 ✔ Typst engine / markdown conversion (7 tests passed)
 ✔ qq_render_text_image tool (14 tests passed)
 ✔ AdminInventory (27 tests passed)
 ✔ qq_send_file tool (20 tests passed)
-ℹ tests 272
-ℹ pass 271
+ℹ tests 276
+ℹ pass 275
 ℹ skipped 1
 ℹ fail 0
 ```
@@ -337,7 +339,7 @@ pnpm test
 - **npmjs**：发布 `dsh-adapter-qq@<version>` 到 `https://registry.npmjs.org/`；需要仓库 Secret `NPM_TOKEN`（npm Automation/Granular Token，勾选 publish 权限）。未配置时该步跳过并警告，GitHub Packages 仍会发布。
 - **GitHub Packages**：发布 `@<owner>/dsh-adapter-qq@<version>` 到 `https://npm.pkg.github.com/`，使用自动注入的 `GITHUB_TOKEN`（workflow 已声明 `packages: write`）。GitHub Packages 的 npm registry 只接受**作用域包**，因此 `.github/scripts/prepare-gh-package.mjs` 会在 CI 中把包名与 `cordis.patch.yml` 改成 `@<owner>/dsh-adapter-qq` 后再打包；仓库内的默认包名保持 `dsh-adapter-qq` 不变。
 - **去重**：目标 registry 已存在同版本时自动跳过，重复运行安全。
-- **手动补发 0.2.2**：`v0.2.2` 是在本 workflow 加入前推送的；配置好 `NPM_TOKEN` 后，在 Actions 里手动跑一次 **Publish** 即可补发（版本取自 `package.json`）。
+- **补发已存在的 tag**：早于本 workflow 的 tag（如 `v0.2.2`）不会自动触发；配置好 `NPM_TOKEN` 后，在 Actions 里手动跑一次 **Publish** 即可补发（版本取自 `package.json`）。`v0.2.3` 起推送 tag 会自动发布。
 - **从 GitHub Packages 安装**：`dsh plugin add @<owner>/dsh-adapter-qq@<version>`（作用域副本的 bundle patch 已同步改写）。
 
 ---
