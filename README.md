@@ -51,7 +51,7 @@
   - 示例（主代理 + 团队成员 + 后台任务）：
     <img src="docs/images/agent-status.png" width="480" alt="代理与后台任务状态图" />
 - 💰 **用量计费联动（可选）**：
-  - 检测到 `@kenz1117/dsh-ui-usage-billing` 时自动注册 `/usage`（`/用量`、`/费用`、`/账单`），读取本机 `GET /api/billing/usage-stats`，用专用 Typst 卡片渲染费用总览、预算进度、模型/站点占比。
+  - 检测到 `@kenz1117/dsh-ui-usage-billing` 时自动注册 `/usage`（`/用量`、`/费用`、`/账单`），读取本机 `GET /api/billing/usage-stats`，用专用 Typst 卡片渲染费用总览、预算进度、模型/站点占比（模型名取计费目录显示名）。
   - 未安装时发送 `/usage` 会提示安装方式；底部菜单与 `/help` 仅在检测到该插件时加入「用量」入口。
   - 示例：<img src="docs/images/usage-billing.png" width="480" alt="用量与费用卡片" />
 - 🖼️ **富媒体收发（图片 / 文件）**：
@@ -314,14 +314,14 @@ pnpm test
 ✔ ApprovalHandler / multi-question (5 tests passed)
 ✔ MessageBridge (27 tests passed)
 ✔ Task overview (11 tests passed)
-✔ Usage billing integration (8 tests passed)
+✔ Usage billing integration (9 tests passed)
 ✔ Render engines (33 passed, 1 skipped)
 ✔ Typst engine / markdown conversion (7 tests passed)
 ✔ qq_render_text_image tool (14 tests passed)
 ✔ AdminInventory (27 tests passed)
 ✔ qq_send_file tool (20 tests passed)
-ℹ tests 271
-ℹ pass 270
+ℹ tests 272
+ℹ pass 271
 ℹ skipped 1
 ℹ fail 0
 ```

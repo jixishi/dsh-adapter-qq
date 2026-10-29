@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   buildUsageMarkdown,
   buildUsageTypst,
+  fetchUsagePricing,
   fetchUsageStats,
   hasUsageBillingPlugin,
   resolveWebOrigin,
@@ -74,6 +75,40 @@ describe('usage billing integration', () => {
       }),
       /HTTP 503/
     );
+  });
+
+  it('maps model keys to pricing catalog display names', async () => {
+    let requested = '';
+    const names = await fetchUsagePricing({
+      ctx: { get: () => ({ getOrigin: () => 'http://127.0.0.1:4321' }) },
+      fetchImpl: async (url) => {
+        requested = String(url);
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            catalog: [
+              { key: 'flash', name: 'DeepSeek V4.1 Flash' },
+              { key: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash' },
+            ],
+          }),
+        };
+      },
+    });
+    assert.equal(requested, 'http://127.0.0.1:4321/api/billing/pricing');
+    assert.equal(names.get('flash'), 'DeepSeek V4.1 Flash');
+
+    const markdown = buildUsageMarkdown(
+      { byModel: { flash: { cost: 1, calls: 2, input: 10, output: 5 } }, total: { cost: 1 } },
+      { modelNames: names }
+    );
+    assert.ok(markdown.includes('DeepSeek V4.1 Flash'));
+
+    const typst = buildUsageTypst(
+      { byModel: { flash: { cost: 1, calls: 2, input: 10, output: 5 } }, total: { cost: 1 } },
+      { modelNames: names }
+    );
+    assert.ok(typst.includes('DeepSeek V4.1 Flash'));
   });
 
   it('builds today/month/total and top-model tables', () => {

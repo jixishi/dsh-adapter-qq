@@ -4,6 +4,15 @@ All notable changes to `dsh-adapter-qq` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- `/usage` model rows now use the billing catalog display names from
+  `GET /api/billing/pricing` (`flash` → DeepSeek V4.1 Flash, `gemini-3.8-flash`
+  → Gemini 3.8 Flash, …), falling back to the raw key when the catalog is
+  unavailable.
+
 ## [0.2.2] - 2026-10-29
 
 ### Added
