@@ -4,6 +4,23 @@ All notable changes to `dsh-adapter-qq` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.2.2] - 2026-10-29
+
+### Added
+
+- `sessionPathDisplay` setting (`tail` | `full`, default `tail`): the session
+  list can show either the last folder of a workspace path or the full path.
+  Exposed as "会话列表路径显示" in the settings tab.
+
+### Changed
+
+- Session list now shows readable preset/permission names instead of raw ids:
+  `standard` → 标准模式, `ptc` → PTC 模式, `minimal` → 极简模式,
+  `cordis` → 创造模式; `read-only` → 只读, `workspace-write` → 工作区写入,
+  `danger-full-access` → 全系统. Custom presets fall back to their DSH name.
+- Tests: 250 total (247 pass + 2 new bridge cases + 1 skipped), covering path
+  modes and label fallbacks.
+
 ## [0.2.1] - 2026-10-28
 
 ### Added
@@ -92,5 +109,6 @@ Targets **DeepSeek Harness 0.2.1-rc.3** (`engines.dsh: >=0.2.1-rc.3 <0.3.0`).
   keyboards/emoji, session pagination, gateway, approvals/questions, bridge,
   render engines, Typst, inventory and both agent tools.
 
+[0.2.2]: https://github.com/jixishi/dsh-adapter-qq/releases/tag/v0.2.2
 [0.2.1]: https://github.com/jixishi/dsh-adapter-qq/releases/tag/v0.2.1
 [0.2.0]: https://github.com/jixishi/dsh-adapter-qq/releases/tag/v0.2.0

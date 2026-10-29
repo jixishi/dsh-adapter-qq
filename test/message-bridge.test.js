@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
-import { MessageBridge } from '../lib/sync/message-bridge.js';
+import { MessageBridge, displayWorkspacePath, resolvePermissionLabel, resolvePresetLabel } from '../lib/sync/message-bridge.js';
 
 describe('MessageBridge', () => {
   function createTestHarness() {
@@ -254,10 +254,46 @@ describe('MessageBridge', () => {
     assert.ok(last.msg.markdown.includes('工作区与会话列表'));
     assert.ok(last.msg.markdown.includes('📁 **qq-bot**'));
     assert.ok(last.msg.markdown.includes('开发需求单'));
+    // Default path mode is the final folder only
+    assert.ok(last.msg.markdown.includes('└ 路径: `qq-bot`'));
+    assert.ok(!last.msg.markdown.includes('F:/dsh-plugin/qq-bot'));
+    // Preset/permission ids are mapped to human labels
+    assert.ok(last.msg.markdown.includes('[`标准模式` | `工作区写入`]'));
+    assert.ok(last.msg.markdown.includes('[`PTC 模式` | `工作区写入`]'));
+    assert.ok(!last.msg.markdown.includes('[`standard` | `workspace-write`]'));
     // Empty workspaces are no longer echoed on a page (output stays compact)
     assert.ok(!last.msg.markdown.includes('暂无会话'));
     assert.ok(last.msg.keyboard);
     harness.bridge.stop();
+  });
+
+  it('should show the full workspace path when sessionPathDisplay=full', async () => {
+    const harness = createTestHarness();
+    harness.getConfig().sessionPathDisplay = 'full';
+
+    harness.gateway.emit('c2c_message', {
+      id: 'msg_path_full',
+      author: { user_openid: 'user_target' },
+      content: '/sessions',
+    });
+    await new Promise((r) => setTimeout(r, 15));
+
+    const markdown = harness.sentMessages[0].msg.markdown;
+    assert.ok(markdown.includes('└ 路径: `F:/dsh-plugin/qq-bot`'));
+    harness.bridge.stop();
+  });
+
+  it('formats path/preset/permission labels with fallbacks', () => {
+    assert.equal(displayWorkspacePath('W:\\dsh-plugins\\dsh-adapter-qq'), 'dsh-adapter-qq');
+    assert.equal(displayWorkspacePath('W:\\dsh-plugins\\dsh-adapter-qq', 'full'), 'W:\\dsh-plugins\\dsh-adapter-qq');
+    assert.equal(displayWorkspacePath('/home/user/project/'), 'project');
+    assert.equal(displayWorkspacePath(''), '未指定');
+    assert.equal(resolvePresetLabel('standard'), '标准模式');
+    assert.equal(resolvePresetLabel('my-preset', [{ id: 'my-preset', name: '我的预设' }]), '我的预设');
+    assert.equal(resolvePresetLabel('unknown'), 'unknown');
+    assert.equal(resolvePermissionLabel('read-only'), '只读');
+    assert.equal(resolvePermissionLabel('custom-perm', [{ id: 'custom-perm', name: '自定义权限' }]), '自定义权限');
+    assert.equal(resolvePermissionLabel(''), '默认');
   });
 
   it('should handle /new wizard: Step 1 shows workspace selection with remote support', async () => {
