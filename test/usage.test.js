@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   buildUsageMarkdown,
+  buildUsageTypst,
   fetchUsageStats,
   hasUsageBillingPlugin,
   resolveWebOrigin,
@@ -106,5 +107,25 @@ describe('usage billing integration', () => {
     const markdown = buildUsageMarkdown({}, Date.now());
     assert.ok(markdown.includes('暂无模型用量数据'));
     assert.ok(markdown.includes('累计'));
+  });
+
+  it('builds a dedicated Typst card layout with budget and theme colors', () => {
+    const body = buildUsageTypst(
+      {
+        budget: 100,
+        total: { cost: 12, calls: 20, input: 1000, output: 500 },
+        byModel: { 'deepseek-v4': { cost: 10, calls: 12, input: 900, output: 400 } },
+        bySite: { 'direct:deepseek': { cost: 10, calls: 12 } },
+        pluginVersion: '1.8.0',
+      },
+      { theme: 'dark', now: Date.now() }
+    );
+    assert.ok(body.includes('今日费用'));
+    assert.ok(body.includes('模型用量'));
+    assert.ok(body.includes('站点分布'));
+    assert.ok(body.includes('本月预算'));
+    assert.ok(body.includes('#1c222b'));
+    assert.ok(body.includes('DeepSeek'));
+    assert.ok(body.includes('\\@kenz1117')); // escaped for Typst references
   });
 });

@@ -45,16 +45,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `GET /api/billing/usage-stats`, and renders today/month/total cost plus
   model/site tops as a Typst image; the bottom menu and `/help` add the entry
   only when the plugin is detected.
-- `/usage` presentation polished: quote-style cost summary, optional budget
-  progress bar, per-model/site share bars, combined input/output tokens, and
-  cleaned site names (`site:` host only, `direct:` provider labels); docs
-  example added at `docs/images/usage-billing.png`.
+- `/usage` now renders a dedicated Typst layout instead of generic Markdown:
+  rounded stat cards for today/month/total, an optional budget progress bar,
+  per-model/site share bars, zebra tables, cleaned site names (`site:` host
+  only, `direct:` provider labels) and light/dark palettes. The README example
+  is `docs/images/usage-billing.png`.
 - Docs: refreshed `docs/images/workspace-sessions.png` with the quote-block
   hierarchy and added `docs/images/agent-status.png` for `/status`.
-- Tests: 269 total (268 pass, 1 skipped), covering path modes, label fallbacks,
+- Tests: 271 total (270 pass, 1 skipped), covering path modes, label fallbacks,
   schedule formatting, team/job capability gating, isolated-terminal detection
   via Agent context/tools/Loader inventory, cold-session permission derivation,
-  usage-billing detection/fetch/format, and conditional menu items.
+  usage-billing detection/fetch/format, the dedicated Typst usage card, and conditional menu items.
 
 ## [0.2.1] - 2026-10-28
 

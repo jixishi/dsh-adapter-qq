@@ -97,4 +97,30 @@ describe('Typst engine rendering', () => {
       await fsp.rm(dir, { recursive: true, force: true });
     }
   });
+
+  it('renders a custom Typst body without markdown conversion', async (t) => {
+    if (!resolveTypstAssets()) {
+      t.skip('typst binary or fonts unavailable');
+      return;
+    }
+    const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'dsh-typst-custom-'));
+    const outPath = path.join(dir, 'custom.png');
+    try {
+      const result = await renderTextWithTypst({
+        typstBody: '#block(fill: rgb("#eef3ff"), radius: 8pt, inset: 12pt)[#text(size: 20pt)[自定义 *Typst* 卡片 ✅]]',
+        title: 'Custom Typst',
+        width: 600,
+        theme: 'light',
+        outPath,
+        logger: { warn() {} },
+      });
+      assert.ok(result);
+      assert.equal(result.engine, 'typst');
+      assert.equal(result.width, 1200);
+      assert.ok(result.height > 100);
+      assert.ok(result.bytes > 1000);
+    } finally {
+      await fsp.rm(dir, { recursive: true, force: true });
+    }
+  });
 });
