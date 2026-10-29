@@ -93,13 +93,15 @@ jobs:
           set -euo pipefail
           if [ -z "${NPM_TOKEN:-}" ]; then
             echo "Skipping npmjs publish (NPM_TOKEN is not configured)."
+            echo "### ⚠️ npmjs publish skipped" >> "${GITHUB_STEP_SUMMARY}"
+            echo "Set the repository secret \`NPM_TOKEN\` and re-run this workflow to publish \`dsh-adapter-qq@${VERSION}\`." >> "${GITHUB_STEP_SUMMARY}"
             exit 0
           fi
           if npm view "dsh-adapter-qq@${VERSION}" version --registry=https://registry.npmjs.org/ >/dev/null 2>&1; then
             echo "dsh-adapter-qq@${VERSION} already exists on npmjs; skipping."
             exit 0
           fi
-          npm publish "${NPM_TGZ}" \
+          npm publish "./${NPM_TGZ}" \
             --access public \
             --registry=https://registry.npmjs.org/
 
@@ -127,9 +129,16 @@ jobs:
             echo "::error::GITHUB_TOKEN is required for GitHub Packages."
             exit 1
           fi
+          # A bare path is parsed as a git shorthand by npm; use an explicit ./
+          # prefix so the packed tarball is treated as a local file.
+          TGZ="./${GH_TGZ}"
+          if [ ! -f "${TGZ}" ]; then
+            echo "::error::tarball not found at ${TGZ}"
+            exit 1
+          fi
           if npm view "${PKG}@${VERSION}" version --registry=https://npm.pkg.github.com/ >/dev/null 2>&1; then
             echo "${PKG}@${VERSION} already exists on GitHub Packages; skipping."
             exit 0
           fi
-          npm publish "${GH_TGZ}" \
+          npm publish "${TGZ}" \
             --registry=https://npm.pkg.github.com/
