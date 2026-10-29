@@ -44,8 +44,9 @@
   - 示例（主代理 + 团队成员 + 后台任务）：
     <img src="docs/images/agent-status.png" width="480" alt="代理与后台任务状态图" />
 - 💰 **用量计费联动（可选）**：
-  - 检测到 `@kenz1117/dsh-ui-usage-billing` 时自动注册 `/usage`（`/用量`、`/费用`、`/账单`），读取本机 `GET /api/billing/usage-stats`，用 Typst 渲染今日/本月/累计费用、模型 Top 与站点 Top。
+  - 检测到 `@kenz1117/dsh-ui-usage-billing` 时自动注册 `/usage`（`/用量`、`/费用`、`/账单`），读取本机 `GET /api/billing/usage-stats`，用 Typst 渲染费用总览、预算进度、模型/站点占比。
   - 未安装时发送 `/usage` 会提示安装方式；底部菜单与 `/help` 仅在检测到该插件时加入「用量」入口。
+  - 示例：<img src="docs/images/usage-billing.png" width="480" alt="用量与费用卡片" />
 - 🖼️ **富媒体收发（图片 / 文件）**：
   - 入站：QQ 转发的图片按**字节魔数**识别真实格式（png/jpeg/gif/webp），修复 `Declared image type does not match its bytes.`；文件自动保存到会话 `uploads/` 并把文本预览/路径交给 Agent。
   - 出站：`/send <路径>`、Agent 回复中的图片/文件、以及 `qq_send_file` 工具均可通过官方富媒体接口（`/v2/users/{openid}/files` + `msg_type=7`）发回 QQ，支持 ≤5MB 直传与 >5MB 分片上传。

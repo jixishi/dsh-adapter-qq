@@ -94,10 +94,11 @@ describe('usage billing integration', () => {
       },
       new Date(`${today}T12:00:00`).getTime()
     );
-    assert.ok(markdown.includes('本月预算 ¥100.00'));
+    assert.ok(markdown.includes('**本月预算** ¥100.00'));
     assert.ok(markdown.includes('今日'));
     assert.ok(markdown.includes('deepseek-v4'));
-    assert.ok(markdown.includes('direct:deepseek'));
+    assert.ok(markdown.includes('DeepSeek'));
+    assert.ok(markdown.includes('█'));
     assert.ok(markdown.includes('@kenz1117/dsh-ui-usage-billing v1.8.0'));
   });
 

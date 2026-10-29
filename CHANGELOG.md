@@ -45,6 +45,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `GET /api/billing/usage-stats`, and renders today/month/total cost plus
   model/site tops as a Typst image; the bottom menu and `/help` add the entry
   only when the plugin is detected.
+- `/usage` presentation polished: quote-style cost summary, optional budget
+  progress bar, per-model/site share bars, combined input/output tokens, and
+  cleaned site names (`site:` host only, `direct:` provider labels); docs
+  example added at `docs/images/usage-billing.png`.
 - Docs: refreshed `docs/images/workspace-sessions.png` with the quote-block
   hierarchy and added `docs/images/agent-status.png` for `/status`.
 - Tests: 269 total (268 pass, 1 skipped), covering path modes, label fallbacks,
