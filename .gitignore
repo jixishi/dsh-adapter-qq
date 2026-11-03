@@ -5,3 +5,5 @@ tools/_*
 .DS_Store
 Thumbs.db
 *.log
+.pnpm-store/
+.recover/
