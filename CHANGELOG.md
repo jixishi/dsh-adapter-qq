@@ -4,6 +4,37 @@ All notable changes to `dsh-adapter-qq` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Integration with [`dsh-token-metrics`](https://github.com/hugoyee75-cmyk/dsh-token-metrics)
+  as an alternative `/usage` data source. Detected via the Loader tree or the
+  plugin inventory; when present it is preferred over
+  `@kenz1117/dsh-ui-usage-billing` and the command renders extra sections that
+  only token-metrics can supply: average TTFT, output speed (t/s), per-project
+  and per-origin (main / subagent / workflow) usage, provider balance and
+  subscription quota windows, the daily-budget progress bar, and the list of
+  models that matched no price. Costs are converted from USD with the snapshot's
+  own `cost.fx.usdCny`.
+- Both sources share one code path (`lib/sync/token-metrics.js` normalises the
+  token-metrics snapshot into the existing document shape), so `/usage`, the
+  bottom menu entry and the `/help` line behave identically whichever plugin is
+  installed; with neither installed the reply lists both install commands.
+
+### Fixed
+
+- Provider identifiers in the site table (`workbuddy`, `deepseek`) are no longer
+  masked as hostnames — they are billing routes, not domains, so masking hid the
+  only information the column carried.
+- Every `$` that reaches a Typst content block is escaped; formatted USD amounts
+  used to open inline math and abort the whole compile.
+- The `累计` range now reads the source's lifetime totals instead of summing
+  per-day buckets, which are pruned by the retention window (400 days by
+  default) and would silently under-report.
+- `byDayModelsSite` uses the `{ day: { model: { site: cell } } }` shape the
+  aggregator expects; the flattened shape produced a table of `***` rows.
+
 ## [0.2.3] - 2026-10-29
 
 ### Added

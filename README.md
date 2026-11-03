@@ -53,9 +53,11 @@
   - 官方团队插件（Agent Teams）启用时，`/status` 使用其 roster 渲染 Lead/成员角色与状态；未启用时回退到普通子代理列表。
   - 示例（主代理 + 团队成员 + 后台任务）：
     <img src="docs/images/agent-status.png" width="480" alt="代理与后台任务状态图" />
-- 💰 **用量计费联动（可选）**：
-  - 检测到 `@kenz1117/dsh-ui-usage-billing` 时自动注册 `/usage [日|月|年|累计]`（`/用量`、`/费用`、`/账单`），读取本机 `/api/billing/usage-stats`、`/pricing` 与 `/relay-quotas`，用专用 Typst 卡片渲染统计卡、30 天热力图、模型/站点分布；模型名取计费目录显示名，站点名取中转登记名称，未知域名脱敏。
-  - 未安装时发送 `/usage` 会提示安装方式；底部菜单与 `/help` 仅在检测到该插件时加入「用量」入口。
+- 💰 **用量计费联动（可选，两个数据源任选其一）**：
+  - **优先 `dsh-token-metrics`**（[hugoyee75-cmyk/dsh-token-metrics](https://github.com/hugoyee75-cmyk/dsh-token-metrics)）：读取本机 `/api/dsh-token-metrics/summary`，除费用/调用/Token/缓存与 30 天热力图外，额外渲染**平均首字延迟（TTFT）**、**输出速度（t/s）**、**项目分布**、**来源分布（主会话/子代理/workflow）**、**供应商余额与订阅配额**、**日预算进度**，以及「未匹配到价格」的模型清单；金额按快照里的 `cost.fx.usdCny` 从美元换算。
+  - **回退 `@kenz1117/dsh-ui-usage-billing`**：读取 `/api/billing/usage-stats`、`/pricing` 与 `/relay-quotas`，模型名取计费目录显示名，站点名取中转登记名称，未知域名脱敏。
+  - 两者的命令与渲染完全一致（`/usage [日|月|年|累计]`，别名 `/用量`、`/费用`、`/账单`）；**同时安装时 `dsh-token-metrics` 优先**。统计口径：缓存命中率 = 命中 /（命中 + 新读入），`cacheWrite` 不计入分母；`累计` 取插件自身的全量 totals（避免按天分桶被保留期裁剪后偏小）。
+  - 未安装任何用量插件时，发送 `/usage` 会同时给出两种插件的安装命令；底部菜单与 `/help` 仅在检测到其中之一时加入「用量费用」入口与说明。
   - 图片发送后的文字说明默认关闭（`sendOverviewCaption`），需要时在设置中开启。
   - 示例：<img src="docs/images/usage-billing.png" width="480" alt="用量与费用卡片" />
 - 🖼️ **富媒体收发（图片 / 文件）**：
@@ -230,7 +232,7 @@ dsh plugin --profile web add github:jixishi/dsh-adapter-qq
 | `/status` | `/状态`, `/代理` | 图片查看主代理、团队成员（启用 Agent Teams 时）/子代理状态，以及正在进行的后台任务 |
 | `/tasks` | `/任务`, `/任务管理`, `/schedule` | 图片查看 DSH「任务」页的定时/自动化任务（规则、状态、计划时间、绑定会话） |
 | `/jobs` | `/后台任务` | 图片查看运行中的后台任务；仅在启用官方持久终端时自动注册 |
-| `/usage [日\|月\|年\|累计]` | `/用量`, `/费用`, `/账单` | 图片查看指定范围的费用/调用/Token/缓存指标、模型/站点分布与 30 天热力图；仅在安装 `@kenz1117/dsh-ui-usage-billing` 时自动注册 |
+| `/usage [日\|月\|年\|累计]` | `/用量`, `/费用`, `/账单` | 图片查看指定范围的费用/调用/Token/缓存指标、模型/站点分布与 30 天热力图；安装 `dsh-token-metrics` 或 `@kenz1117/dsh-ui-usage-billing` 时自动注册（前者的 TTFT/输出速度/项目/来源/供应商余额/日预算也会一并渲染） |
 
 #### 新建会话交互向导流程：
 1. **工作区选择 (第 1 步)**：发送 `/new`，操作板展示所有已有工作区（如 `📁 免费:~ (远程)`, `📁 qq-bot`, `📁 AutoAim`）及【🔍 浏览并选择目录】。
@@ -322,6 +324,7 @@ pnpm test
 ✔ MessageBridge (27 tests passed)
 ✔ Task overview (11 tests passed)
 ✔ Usage billing integration (12 tests passed)
+✔ dsh-token-metrics integration (11 tests passed)
 ✔ Render engines (33 passed, 1 skipped)
 ✔ Typst engine / markdown conversion (7 tests passed)
 ✔ qq_render_text_image tool (14 tests passed)
