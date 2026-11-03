@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `streamReply` setting (default **off**) plus `streamIntervalMs` (default
+  1500 ms, clamped 500–10000): when enabled, assistant output is pushed to QQ
+  incrementally with throttling, and the final message only carries the unsent
+  remainder so streamed text is never duplicated. Internal `<think>` /
+  `<system-reminder>` / runtime-context fragments are stripped from each
+  streamed piece.
 - `/usage [日|月|年|累计]`（also `day/month/year/all`, default 本月）aggregates
   the selected range from `byDay` / `byDayModels` / `byDayModelsSite` and renders
   a dedicated Typst card with:

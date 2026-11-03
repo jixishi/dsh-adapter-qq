@@ -20,6 +20,7 @@
 - **菜单动态预设**：底部菜单新增「模型与思考」「权限模式」子菜单，按**当前模型**的思考等级与已配置权限**动态生成带参数项**（`/effort high`、`/permission workspace-write`）；原交互式 `/effort`、`/permission` 保留。
 - **`/usage` 范围与可视化**：`/usage 日|月|年|累计`（默认本月）；费用/调用/Token/平均成本/缓存命中率/输入输出比/思考占比/峰值日统计卡片；最近 30 天费用热力图；模型名取计费目录显示名，站点名取中转登记名称，未登记域名脱敏。
 - **图片说明默认关闭**：`/usage`、`/status`、`/tasks`、`/jobs`、`/stats` 发完图片后不再补发文字块；需要时在设置中开启 `sendOverviewCaption`。
+- **流式回复开关**：新增 `streamReply`（默认关闭）与 `streamIntervalMs`（默认 1500ms）。开启后按增量持续推送回复文本，结束时只补发未发送的剩余部分，不会重复已显示的内容。
 - **CI 自动发布**：`.github/workflows/publish.yml` 在 `v*` tag 或手动触发时先测试，再发布 npmjs 与 GitHub Packages（GitHub Packages 使用 `@<owner>/dsh-adapter-qq` 作用域副本）。
 - **此前 0.2.2 能力**：会话列表引用块层级、路径/预设/权限可读名称、`/status` `/tasks` `/jobs`、官方扫码绑定。
 
@@ -204,6 +205,8 @@ dsh plugin --profile web add github:jixishi/dsh-adapter-qq
 | `sessionPathDisplay` | 会话列表工作区路径显示：`tail` 仅最后一级文件夹 / `full` 完整路径 | `tail` |
 | `autoSendAttachments` | Agent 回复中的图片/文件自动转发到 QQ | `true` |
 | `sendOverviewCaption` | 渲染图片发送后是否再补发文字说明 | `false` |
+| `streamReply` | 是否启用流式回复（按增量持续推送回复文本） | `false` |
+| `streamIntervalMs` | 流式推送间隔（毫秒，500–10000） | `1500` |
 | `renderWidth` | 文本渲染图片的像素宽度（480–1600） | `900` |
 | `renderTheme` | 文本渲染图片主题（`light` / `dark`） | `light` |
 | `mcpManagerToken` | `@xxxyz/dsh-mcp-manager` 写操作令牌（可选，密文遮罩；也可用环境变量 `DSH_MCP_MANAGER_TOKEN`） | `""` |
