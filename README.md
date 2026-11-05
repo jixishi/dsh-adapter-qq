@@ -326,7 +326,7 @@ pnpm test
 
 测试结果（DSH 0.2.1-rc.3 / Node 26，本机无头浏览器受限时浏览器用例会跳过）：
 ```text
-✔ QQApiClient (22 tests passed)
+✔ QQApiClient (23 tests passed)
 ✔ QQ media helpers (35 tests passed)
 ✔ KeyboardBuilder (19 tests passed)
 ✔ Session emoji palette (5 tests passed)
@@ -336,6 +336,7 @@ pnpm test
 ✔ ApprovalHandler / multi-question (5 tests passed)
 ✔ MessageBridge (33 tests passed)
 ✔ subscription intervals / digest / store / scheduler (29 tests passed)
+✔ subscription lifecycle / delivery safety (6 tests passed)
 ✔ subscription HTTP route (7 tests passed)
 ✔ client sidebar registration contract (6 tests passed)
 ✔ subscription pane layout adapts to the viewport (6 tests passed)
@@ -348,8 +349,8 @@ pnpm test
 ✔ qq_render_text_image tool (14 tests passed)
 ✔ AdminInventory (27 tests passed)
 ✔ qq_send_file tool (20 tests passed)
-ℹ tests 357
-ℹ pass 356
+ℹ tests 364
+ℹ pass 363
 ℹ skipped 1
 ℹ fail 0
 ```

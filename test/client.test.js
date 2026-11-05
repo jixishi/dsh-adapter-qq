@@ -166,20 +166,44 @@ describe('QQApiClient', () => {
     }
   });
 
-  it('should expose skills, MCP and render shortcuts in the default menu', () => {
+  it('collects skills, MCP, stats, usage and subscriptions under one 管理 submenu', () => {
     const client = new QQApiClient({ appId: '123', clientSecret: 'sec' });
-    const menu = client.getDefaultMenu();
+    const menu = client.getDefaultMenu({ usage: true });
 
-    const targets = menu.items
+    // These are all "look at something" entries: they live in one submenu so the
+    // top level stays free for conversation actions.
+    const manage = menu.items.find((item) => item.name === '管理');
+    assert.ok(manage, 'management submenu must exist');
+    const targets = manage.sub_menu_items.map((item) => item.send_message);
+    for (const command of ['/skills', '/mcp', '/stats', '/usage', '/subscriptions']) {
+      assert.ok(targets.includes(command), `管理 must include ${command}`);
+    }
+    // QQ caps: 5 sub-items per menu.
+    assert.ok(manage.sub_menu_items.length <= 5, 'at most 5 sub-items');
+
+    // They must NOT also sit at the top level.
+    const topLevel = menu.items
       .filter((item) => item.type === 'send_message')
       .map((item) => item.send_message);
-    assert.ok(targets.includes('/skills'), 'top level menu must include /skills');
-    assert.ok(targets.includes('/mcp'), 'top level menu must include /mcp');
+    for (const command of ['/skills', '/mcp', '/stats', '/usage']) {
+      assert.ok(!topLevel.includes(command), `${command} must not be duplicated at the top level`);
+    }
 
     const shortcuts = menu.items.find((item) => item.name === '快捷操作');
     assert.ok(shortcuts, 'quick action sub menu must exist');
     const shortcutTargets = shortcuts.sub_menu_items.map((item) => item.send_message);
     assert.ok(shortcutTargets.includes('/render'), 'quick actions must include /render');
+
+    assert.ok(menu.items.length <= 10, 'QQ allows at most 10 top-level items');
+  });
+
+  it('drops the usage entry from 管理 when the billing plugin is absent', () => {
+    const client = new QQApiClient({ appId: '123', clientSecret: 'sec' });
+    const menu = client.getDefaultMenu({ usage: false });
+    const manage = menu.items.find((item) => item.name === '管理');
+    const targets = manage.sub_menu_items.map((item) => item.send_message);
+    assert.ok(!targets.includes('/usage'), 'no /usage without the billing plugin');
+    assert.ok(targets.includes('/subscriptions'), 'subscriptions are always available');
   });
 
   it('should fetch and cache access_token', async () => {

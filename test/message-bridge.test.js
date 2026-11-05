@@ -1084,7 +1084,11 @@ describe('MessageBridge', () => {
 
     store.enqueue('sess-2', { text: '后台输出', at: clock.value });
     clock.value += 5 * 60_000;
-    await bridge.flushSubscriptionDigest('sess-2', store.digestFor('sess-2'));
+    // The digest is only committed when the send actually succeeds, so assert on
+    // the delivery result rather than on the buffer being drained.
+    const delivered = await bridge.flushSubscriptionDigest('sess-2', store.digestFor('sess-2'));
+    assert.equal(delivered, true, 'the mock gateway is connected, so delivery succeeds');
+    store.commit('sess-2');
 
     // The mock client returns `msg_1`…`msg_N` ids; the last one is our notice.
     const noticeId = `msg_${harness.sentMessages.length}`;

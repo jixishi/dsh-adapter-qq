@@ -173,7 +173,10 @@ describe('SubscriptionStore', () => {
 
     const digest = store.digestFor('a');
     assert.equal(digest.count, 2);
-    // The window resets after a digest is taken.
+    // Building a digest must NOT consume the buffer: a failed send would
+    // otherwise lose the messages. Only commit() (after delivery) drops them.
+    assert.equal(store.buffers.get('a').messages.length, 2);
+    assert.equal(store.commit('a'), true);
     assert.equal(store.buffers.get('a'), undefined);
     assert.equal(store.digestFor('a'), null);
   });
@@ -184,6 +187,7 @@ describe('SubscriptionStore', () => {
     store.enqueue('a', { text: 'one', at: clock.now() });
     clock.advance(5 * 60_000);
     store.digestFor('a');
+    store.commit('a');
 
     store.enqueue('a', { text: 'two', at: clock.now() });
     // A continuous stream must not push the deadline back.

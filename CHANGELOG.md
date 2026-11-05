@@ -72,9 +72,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     `lib/sync/display-time.js`; the route attaches `updatedLabel`, `workspace`
     and `workspaceGroups` to the list payload, and accepts an injectable `now()`
     for deterministic tests.
-- Tests: 59 new cases (357 total, 356 pass, 1 skipped).
+- Tests: 66 new cases (364 total, 363 pass, 1 skipped).
+
+### Changed
+
+- **The bottom menu groups its "look at something" entries under 管理**:
+  技能管理 / MCP 服务 / 统计信息 / 用量计费（装了计费插件时）/ 会话订阅.
+  They used to occupy top-level slots (QQ allows only 10), and 会话订阅 had no
+  menu entry at all — the feature existed but was unreachable from the menu.
+  Friendly-name mapping and `/help` were updated to match.
 
 ### Fixed
+
+### Fixed
+
+- **Scheduled subscription pushes never fired.** `MessageBridge#start()` begins
+  with `this.stop()`, and `stop()` nulled `subscriptionScheduler`. Every later
+  `enqueue()` then called `arm()` on `null`, so no timer was ever armed while the
+  pane still counted buffered messages ("3 条待推送"). The scheduler's lifetime
+  belongs to `index.js` (disposed with the plugin), not to the bridge's
+  start/stop cycle; `stop()` now only clears per-process state (one-shot reply
+  targets, notice index) and leaves persisted subscriptions and the scheduler
+  intact.
+- **A digest could be lost without being sent.** `digestFor()` consumed the
+  buffer before the send, so a failed delivery (no bound user, QQ down, throw)
+  silently destroyed the messages and the next "立即推送" reported "没有待推送的消息".
+  `digestFor()` is now read-only and `commit()` drops the window only after the
+  bridge confirms delivery; `flushSubscriptionDigest()` returns `true`/`false`
+  instead of returning silently.
+- **Failure could spin the timer.** With the buffer preserved, an already-expired
+  window made `arm()` re-fire at 0ms, retrying a permanently failing send at full
+  speed (observed: 14 attempts in 40ms). Added per-session exponential backoff
+  (30s, 1m, 2m … capped at the subscription's own interval) that `arm()` honours.
 
 - **"立即推送" now actually pushes.** It called `runDue()`, which only flushes
   sessions whose coalescing window had already closed — so for anything buffered
