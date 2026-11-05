@@ -32,20 +32,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - `handleUserPrompt` now resolves a target session instead of always using the
     active one; the attachment cwd follows the target through the new
     `SessionManager#getSessionInfoById`.
-- **Sidebar "订阅管理" tab.** Registered as a pair — `sidebar.right.pane.tab`
-  (body) and `sidebar.right.pane.tab.title` (label) — so the pane renders with a
-  proper tab header. Lists subscriptions with interval, pending count and active
-  flag; supports add, remove, per-session interval edits and "立即推送".
+- **Left sidebar "订阅管理" entry.** Registered in the left navigation bar
+  (the same column as Logcat / 插件 / 远程工作区) as a matching pair:
+  `sidebar.panellist` (`id` / `order` / `label` + icon component) and `main`
+  (`key` **must equal** that `id`). Registering only one side loads cleanly but
+  shows nothing when the row is clicked, so the pairing is pinned by a test that
+  runs the real client factory against a fake slot registry.
+  The panel lists subscriptions with interval, pending count and active flag;
+  supports add, remove, per-session interval edits and "立即推送".
 - **Subscription HTTP API** at `POST /dsh-adapter-qq/subscriptions`
   (`list` / `subscribe` / `unsubscribe` / `setInterval` / `flush`), with the same
   `x-dsh-plugin` header guard and 64 KiB body cap as the onboarding route.
 - Commands: `/subscribe` (`/订阅`), `/subscriptions` (`/订阅列表`),
   `/unsubscribe` (`/取消订阅`), `/reply` (`/回复`); bottom-menu name mapping and
   `/help` entries updated.
-- Tests: 30 new cases (328 total, 327 pass, 1 skipped).
+- Tests: 35 new cases (333 total, 332 pass, 1 skipped).
 
 ### Fixed
 
+- The subscription panel is now reachable. The first attempt registered
+  `sidebar.right.pane.tab` / `.title`, which is the RIGHT-side pane slot — the
+  right pane's own "开始" page is driven by `sidebarRightTabs.register({ guide })`
+  instead, so nothing surfaced and the panel could not be opened at all. Moved to
+  the left sidebar pair (`sidebar.panellist` + `main`).
 - `SubscriptionScheduler` now inherits the store's clock. Two independent clocks
   could disagree, leaving a window that never closes.
 - Subscription lookups no longer assume `SessionManager#getSessionInfoById`

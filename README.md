@@ -60,7 +60,7 @@
   - **通知带操作按钮**：每条摘要附带「📖 查看 / 💬 快速回复 / 🛑 取消订阅 / 📋 订阅列表」。
   - **快速回复不切会话**：点「快速回复」或发 `/reply <会话> <内容>`，消息直接投递到目标会话；`/reply <会话>` 进入一次性定向态，**只对下一条消息生效**，当前活跃会话保持不变。
   - **引用即回复**：直接对订阅通知消息使用 QQ 的「回复」发送内容，会自动路由回该会话（按通知消息 ID 反查，最多保留最近 200 条）。
-  - **独立管理 Tab**：插件在侧栏右栏注册「🔔 订阅管理」页（`sidebar.right.pane.tab` + `.title` 成对注册），可查看订阅列表、待推送条数、一键取消、点选新增、逐条调整汇聚间隔，并支持「立即推送」把缓冲立刻合并发出。
+  - **左侧导航栏入口**：插件在**左侧导航栏**（与 Logcat / 插件 / 远程工作区 同一排）注册「🔔 订阅管理」入口。注册按 DSH 的配对规则：`sidebar.panellist`（`id` / `order` / `label` + 图标）与 `main`（`key` **必须等于**上面的 `id`）成对注册；只注册一侧会导致插件能加载、点入口却没内容。点开后可查看订阅列表、待推送条数、一键取消、点选新增、逐条调整汇聚间隔，并支持「立即推送」把缓冲立刻合并发出。
   - **持久化**：订阅写在 `$DSH_HOME/adapter-qq/subscriptions.json`（临时文件 + rename 原子替换）；文件损坏时降级为空订阅而不是让插件启动失败。
 - 💰 **用量计费联动（可选，两个数据源任选其一）**：
   - **优先 `dsh-token-metrics`**（[hugoyee75-cmyk/dsh-token-metrics](https://github.com/hugoyee75-cmyk/dsh-token-metrics)）：读取本机 `/api/dsh-token-metrics/summary`，除费用/调用/Token/缓存与 30 天热力图外，额外渲染**平均首字延迟（TTFT）**、**输出速度（t/s）**、**项目分布**、**来源分布（主会话/子代理/workflow）**、**供应商余额与订阅配额**、**日预算进度**，以及「未匹配到价格」的模型清单；金额按快照里的 `cost.fx.usdCny` 从美元换算。
@@ -337,6 +337,7 @@ pnpm test
 ✔ MessageBridge (33 tests passed)
 ✔ subscription intervals / digest / store / scheduler (23 tests passed)
 ✔ subscription HTTP route (7 tests passed)
+✔ client sidebar registration contract (5 tests passed)
 ✔ Task overview (11 tests passed)
 ✔ Usage billing integration (12 tests passed)
 ✔ dsh-token-metrics integration (11 tests passed)
@@ -345,8 +346,8 @@ pnpm test
 ✔ qq_render_text_image tool (14 tests passed)
 ✔ AdminInventory (27 tests passed)
 ✔ qq_send_file tool (20 tests passed)
-ℹ tests 328
-ℹ pass 327
+ℹ tests 333
+ℹ pass 332
 ℹ skipped 1
 ℹ fail 0
 ```
