@@ -14,6 +14,7 @@ import {
   normalizeIntervalMinutes,
   previewMessage,
 } from '../lib/sync/subscriptions.js';
+import { formatDueIn } from '../lib/sync/display-time.js';
 
 const silent = { warn() {}, info() {}, error() {} };
 
@@ -356,5 +357,114 @@ describe('SubscriptionScheduler', () => {
     scheduler.arm();
     assert.equal(scheduler.timer, null);
     scheduler.stop();
+  });
+});
+
+describe('immediate flush ("立即推送")', () => {
+  let dir;
+  let clock;
+
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dsh-sub-flush-'));
+    clock = makeClock();
+  });
+
+  afterEach(() => {
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('flushes a window that is NOT yet due', async () => {
+    const store = new SubscriptionStore({ filePath: '', now: clock.now, logger: silent });
+    await store.subscribe({ sessionId: 'a', title: 'A', intervalMinutes: 15 });
+    store.enqueue('a', { text: '刚刚到达的消息', at: clock.now() });
+
+    // Nothing is due yet: this is exactly the case the button used to ignore.
+    assert.deepEqual(store.dueSessionIds(), []);
+
+    const sent = [];
+    const scheduler = new SubscriptionScheduler({
+      store,
+      flush: async (sessionId, digest) => sent.push({ sessionId, count: digest.count }),
+      logger: silent,
+    });
+
+    const flushed = await scheduler.flushAll();
+    assert.deepEqual(flushed, ['a']);
+    assert.deepEqual(sent, [{ sessionId: 'a', count: 1 }]);
+    // The buffer is consumed, so the countdown disappears.
+    assert.equal(store.buffers.get('a'), undefined);
+    scheduler.stop();
+  });
+
+  it('flushes every buffered session, not just the earliest', async () => {
+    const store = new SubscriptionStore({ filePath: '', now: clock.now, logger: silent });
+    await store.subscribe({ sessionId: 'fast', intervalMinutes: 1 });
+    await store.subscribe({ sessionId: 'slow', intervalMinutes: 60 });
+    store.enqueue('fast', { text: 'f', at: clock.now() });
+    store.enqueue('slow', { text: 's', at: clock.now() });
+
+    const sent = [];
+    const scheduler = new SubscriptionScheduler({
+      store,
+      flush: async (sessionId) => sent.push(sessionId),
+      logger: silent,
+    });
+
+    const flushed = await scheduler.flushAll();
+    assert.deepEqual(flushed.sort(), ['fast', 'slow']);
+    assert.deepEqual(sent.sort(), ['fast', 'slow']);
+    assert.equal(store.pendingCount(), 0);
+    scheduler.stop();
+  });
+
+  it('reports nothing when the buffers are empty', async () => {
+    const store = new SubscriptionStore({ filePath: '', now: clock.now, logger: silent });
+    await store.subscribe({ sessionId: 'a', intervalMinutes: 5 });
+    const scheduler = new SubscriptionScheduler({ store, flush: async () => {}, logger: silent });
+    assert.deepEqual(await scheduler.flushAll(), []);
+    scheduler.stop();
+  });
+
+  it('leaves due-only flushing unchanged', async () => {
+    const store = new SubscriptionStore({ filePath: '', now: clock.now, logger: silent });
+    await store.subscribe({ sessionId: 'a', intervalMinutes: 5 });
+    store.enqueue('a', { text: 'x', at: clock.now() });
+
+    const sent = [];
+    const scheduler = new SubscriptionScheduler({
+      store,
+      flush: async (sessionId) => sent.push(sessionId),
+      logger: silent,
+    });
+    // runDue keeps honouring the window.
+    assert.deepEqual(await scheduler.runDue(), []);
+    assert.deepEqual(sent, []);
+    scheduler.stop();
+  });
+});
+
+describe('next push countdown', () => {
+  it('formats the remaining wait for the pane', () => {
+    assert.equal(formatDueIn(-1), '');
+    assert.equal(formatDueIn(0), '即将推送');
+    assert.equal(formatDueIn(900), '1秒后推送');
+    assert.equal(formatDueIn(59_000), '59秒后推送');
+    assert.equal(formatDueIn(252_000), '4分12秒后推送');
+    assert.equal(formatDueIn(3_720_000), '1小时2分后推送');
+    // Junk must not leak NaN into the UI.
+    assert.equal(formatDueIn(undefined), '');
+    assert.equal(formatDueIn('abc'), '');
+  });
+
+  it('exposes the countdown on each subscription in the snapshot', async () => {
+    const store = new SubscriptionStore({ filePath: '', now: () => 1_000_000, logger: silent });
+    await store.subscribe({ sessionId: 'a', intervalMinutes: 5 });
+    // No buffered message -> no countdown.
+    assert.equal(store.snapshot().subscriptions[0].dueInLabel, '');
+
+    store.enqueue('a', { text: 'x', at: 1_000_000 });
+    const snap = store.snapshot().subscriptions[0];
+    assert.equal(snap.dueInMs, 5 * 60 * 1000);
+    assert.equal(snap.dueInLabel, '5分0秒后推送');
   });
 });

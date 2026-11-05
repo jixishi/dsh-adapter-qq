@@ -335,7 +335,7 @@ pnpm test
 ✔ QQ scan-to-bind protocol (11 tests passed)
 ✔ ApprovalHandler / multi-question (5 tests passed)
 ✔ MessageBridge (33 tests passed)
-✔ subscription intervals / digest / store / scheduler (23 tests passed)
+✔ subscription intervals / digest / store / scheduler (29 tests passed)
 ✔ subscription HTTP route (7 tests passed)
 ✔ client sidebar registration contract (6 tests passed)
 ✔ subscription pane layout adapts to the viewport (6 tests passed)
@@ -348,8 +348,8 @@ pnpm test
 ✔ qq_render_text_image tool (14 tests passed)
 ✔ AdminInventory (27 tests passed)
 ✔ qq_send_file tool (20 tests passed)
-ℹ tests 351
-ℹ pass 350
+ℹ tests 357
+ℹ pass 356
 ℹ skipped 1
 ℹ fail 0
 ```

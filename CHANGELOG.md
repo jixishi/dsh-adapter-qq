@@ -64,13 +64,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     newest workspace first and newest session first inside each group. Groups are
     keyed by the full path, so two projects sharing a tail segment
     (`W:/x/proj` vs `W:/z/proj`) stay apart.
+  - **Next-push countdown.** Each subscription shows `4分12秒后推送` next to its
+    interval, computed from the live buffer window (`formatDueIn`), so the
+    interval setting becomes observable rather than abstract. It disappears once
+    the buffer is drained.
   - `formatRelativeTime` / `workspaceLabel` / `groupByWorkspace` live in
     `lib/sync/display-time.js`; the route attaches `updatedLabel`, `workspace`
     and `workspaceGroups` to the list payload, and accepts an injectable `now()`
     for deterministic tests.
-- Tests: 53 new cases (351 total, 350 pass, 1 skipped).
+- Tests: 59 new cases (357 total, 356 pass, 1 skipped).
 
 ### Fixed
+
+- **"立即推送" now actually pushes.** It called `runDue()`, which only flushes
+  sessions whose coalescing window had already closed — so for anything buffered
+  but not yet due (the normal case) the button did nothing. Added
+  `SubscriptionScheduler#flushAll()` that ignores the window, plus visible
+  feedback: the button is no longer disabled when nothing is buffered, it shows
+  `推送中…` while running, and the outcome is reported
+  (`已立即推送 N 个会话的摘要到 QQ` / `当前没有待推送的消息`). `runDue()` keeps
+  honouring the window for scheduled flushes.
 
 - **The subscription pane no longer has a fixed height.** It used
   `height:100%` + `overflow:hidden` on the host container and a hard
