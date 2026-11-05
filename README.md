@@ -338,6 +338,7 @@ pnpm test
 ✔ subscription intervals / digest / store / scheduler (23 tests passed)
 ✔ subscription HTTP route (7 tests passed)
 ✔ client sidebar registration contract (5 tests passed)
+✔ subscription pane layout adapts to the viewport (6 tests passed)
 ✔ Task overview (11 tests passed)
 ✔ Usage billing integration (12 tests passed)
 ✔ dsh-token-metrics integration (11 tests passed)
@@ -346,8 +347,8 @@ pnpm test
 ✔ qq_render_text_image tool (14 tests passed)
 ✔ AdminInventory (27 tests passed)
 ✔ qq_send_file tool (20 tests passed)
-ℹ tests 333
-ℹ pass 332
+ℹ tests 339
+ℹ pass 338
 ℹ skipped 1
 ℹ fail 0
 ```

@@ -11,6 +11,7 @@ import './approval-handler.test.js';
 import './message-bridge.test.js';
 import './subscriptions.test.js';
 import './subscription-route.test.js';
+import './subscription-layout.test.js';
 import './stream-reply.test.js';
 import './task-overview.test.js';
 import './usage.test.js';

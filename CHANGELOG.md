@@ -46,9 +46,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Commands: `/subscribe` (`/订阅`), `/subscriptions` (`/订阅列表`),
   `/unsubscribe` (`/取消订阅`), `/reply` (`/回复`); bottom-menu name mapping and
   `/help` entries updated.
-- Tests: 35 new cases (333 total, 332 pass, 1 skipped).
+- Tests: 41 new cases (339 total, 338 pass, 1 skipped).
 
 ### Fixed
+
+- **The subscription pane no longer has a fixed height.** It used
+  `height:100%` + `overflow:hidden` on the host container and a hard
+  `max-height:190px` on the candidate list, so a short window clipped content the
+  user could not scroll to. The host now grows with the pane
+  (`flex:1 1 auto`, `max-height:100%`, `overflow-y:auto`), the subscription list
+  takes the leftover space, and the candidate list uses
+  `max-height: clamp(140px, 32vh, 460px)` so it tracks the real screen size.
 
 - The subscription panel is now reachable. The first attempt registered
   `sidebar.right.pane.tab` / `.title`, which is the RIGHT-side pane slot — the
