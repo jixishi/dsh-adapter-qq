@@ -8,6 +8,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Session subscriptions with coalesced background notifications.**
+  - `lib/sync/subscriptions.js`: a persisted `SubscriptionStore` plus a
+    single-timer `SubscriptionScheduler`. Messages from a subscribed session are
+    buffered; the window opens on that session's first message and, when it
+    closes, the batch is merged into **one** digest. A continuous stream never
+    pushes the deadline back, and an empty window never fires.
+  - Per-session intervals of **1 / 5 / 15 / 30 / 60 minutes** (default 5).
+    Unknown or hand-edited values snap to the nearest bucket and the derived
+    timers are clamped, so a corrupt store cannot schedule absurd delays.
+  - Background capture happens in `handleDshSessionEvent` **before** the
+    active-session filter — a subscribed session is by definition not the active
+    one, so filtering first would have made the feature unreachable.
+  - Digests carry an inline keyboard: 查看 / 快速回复 / 取消订阅 / 订阅列表.
+  - `SubscriptionStore` persists to `$DSH_HOME/adapter-qq/subscriptions.json`
+    with a temp-file + rename write; a corrupt file degrades to "no
+    subscriptions" instead of failing plugin startup.
+- **Quick reply without switching the active session.**
+  - `/reply <session> [text]`: with text it delivers immediately, without text it
+    arms a one-shot target for the next message. `/reply off` clears it.
+  - Replying on QQ to a subscription notice routes the text back to that session
+    (resolved from the notice's message id, bounded to the newest 200).
+  - `handleUserPrompt` now resolves a target session instead of always using the
+    active one; the attachment cwd follows the target through the new
+    `SessionManager#getSessionInfoById`.
+- **Sidebar "订阅管理" tab.** Registered as a pair — `sidebar.right.pane.tab`
+  (body) and `sidebar.right.pane.tab.title` (label) — so the pane renders with a
+  proper tab header. Lists subscriptions with interval, pending count and active
+  flag; supports add, remove, per-session interval edits and "立即推送".
+- **Subscription HTTP API** at `POST /dsh-adapter-qq/subscriptions`
+  (`list` / `subscribe` / `unsubscribe` / `setInterval` / `flush`), with the same
+  `x-dsh-plugin` header guard and 64 KiB body cap as the onboarding route.
+- Commands: `/subscribe` (`/订阅`), `/subscriptions` (`/订阅列表`),
+  `/unsubscribe` (`/取消订阅`), `/reply` (`/回复`); bottom-menu name mapping and
+  `/help` entries updated.
+- Tests: 30 new cases (328 total, 327 pass, 1 skipped).
+
+### Fixed
+
+- `SubscriptionScheduler` now inherits the store's clock. Two independent clocks
+  could disagree, leaving a window that never closes.
+- Subscription lookups no longer assume `SessionManager#getSessionInfoById`
+  exists; a defensive `describeSession` falls back to the listing entry.
+- `MessageBridge#stop()` no longer throws when the scheduler stub lacks `stop()`.
+
+### Added
+
 - Integration with [`dsh-token-metrics`](https://github.com/hugoyee75-cmyk/dsh-token-metrics)
   as an alternative `/usage` data source. Detected via the Loader tree or the
   plugin inventory; when present it is preferred over

@@ -8,6 +8,8 @@ import './gateway.test.js';
 import './onboard.test.js';
 import './approval-handler.test.js';
 import './message-bridge.test.js';
+import './subscriptions.test.js';
+import './subscription-route.test.js';
 import './stream-reply.test.js';
 import './task-overview.test.js';
 import './usage.test.js';

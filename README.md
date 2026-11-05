@@ -53,6 +53,15 @@
   - 官方团队插件（Agent Teams）启用时，`/status` 使用其 roster 渲染 Lead/成员角色与状态；未启用时回退到普通子代理列表。
   - 示例（主代理 + 团队成员 + 后台任务）：
     <img src="docs/images/agent-status.png" width="480" alt="代理与后台任务状态图" />
+- 🔔 **会话订阅与定时汇聚通知**：
+  - **订阅非活跃会话**：`/subscribe <会话> [分钟]` 或侧栏「订阅管理」面板。被订阅的会话在后台产生 `assistant/message` 或阻塞式提问时，不会立刻打扰你，而是先进入缓冲。
+  - **定时汇聚**：汇聚窗口从**该会话的第一条**消息开始计时，窗口内到达的多条消息合并成**一条摘要**推送；窗口关闭后重新计时。连续不断的消息不会把推送无限推迟。
+  - **间隔可按会话独立配置**：`1 / 5 / 15 / 30 / 60` 分钟（默认 5），手改存储里的非法值会吸附到最近档位，不会产生异常定时器。
+  - **通知带操作按钮**：每条摘要附带「📖 查看 / 💬 快速回复 / 🛑 取消订阅 / 📋 订阅列表」。
+  - **快速回复不切会话**：点「快速回复」或发 `/reply <会话> <内容>`，消息直接投递到目标会话；`/reply <会话>` 进入一次性定向态，**只对下一条消息生效**，当前活跃会话保持不变。
+  - **引用即回复**：直接对订阅通知消息使用 QQ 的「回复」发送内容，会自动路由回该会话（按通知消息 ID 反查，最多保留最近 200 条）。
+  - **独立管理 Tab**：插件在侧栏右栏注册「🔔 订阅管理」页（`sidebar.right.pane.tab` + `.title` 成对注册），可查看订阅列表、待推送条数、一键取消、点选新增、逐条调整汇聚间隔，并支持「立即推送」把缓冲立刻合并发出。
+  - **持久化**：订阅写在 `$DSH_HOME/adapter-qq/subscriptions.json`（临时文件 + rename 原子替换）；文件损坏时降级为空订阅而不是让插件启动失败。
 - 💰 **用量计费联动（可选，两个数据源任选其一）**：
   - **优先 `dsh-token-metrics`**（[hugoyee75-cmyk/dsh-token-metrics](https://github.com/hugoyee75-cmyk/dsh-token-metrics)）：读取本机 `/api/dsh-token-metrics/summary`，除费用/调用/Token/缓存与 30 天热力图外，额外渲染**平均首字延迟（TTFT）**、**输出速度（t/s）**、**项目分布**、**来源分布（主会话/子代理/workflow）**、**供应商余额与订阅配额**、**日预算进度**，以及「未匹配到价格」的模型清单；金额按快照里的 `cost.fx.usdCny` 从美元换算。
   - **回退 `@kenz1117/dsh-ui-usage-billing`**：读取 `/api/billing/usage-stats`、`/pricing` 与 `/relay-quotas`，模型名取计费目录显示名，站点名取中转登记名称，未知域名脱敏。
@@ -233,6 +242,10 @@ dsh plugin --profile web add github:jixishi/dsh-adapter-qq
 | `/tasks` | `/任务`, `/任务管理`, `/schedule` | 图片查看 DSH「任务」页的定时/自动化任务（规则、状态、计划时间、绑定会话） |
 | `/jobs` | `/后台任务` | 图片查看运行中的后台任务；仅在启用官方持久终端时自动注册 |
 | `/usage [日\|月\|年\|累计]` | `/用量`, `/费用`, `/账单` | 图片查看指定范围的费用/调用/Token/缓存指标、模型/站点分布与 30 天热力图；安装 `dsh-token-metrics` 或 `@kenz1117/dsh-ui-usage-billing` 时自动注册（前者的 TTFT/输出速度/项目/来源/供应商余额/日预算也会一并渲染） |
+| `/subscribe [会话] [分钟]` | `/订阅` | 订阅**非活跃**会话：后台新消息先累积，到间隔后合并成一条摘要推送。间隔支持 **1 / 5 / 15 / 30 / 60 分钟**（默认 5）；不带参数时订阅当前活跃会话 |
+| `/subscriptions` | `/订阅列表` | 列出全部订阅：会话标题、汇聚间隔、待推送条数、是否活跃；附「取消 / 打开」按键 |
+| `/unsubscribe [会话]` | `/取消订阅` | 取消订阅；不带参数时取消当前活跃会话（或唯一的那个订阅） |
+| `/reply <会话> [内容]` | `/回复`, `/快速回复` | **定向快速回复**：只给会话时进入一次性定向态（下一条消息直达该会话）；带内容时立即发送。**不切换**当前活跃会话；`/reply off` 取消。也可直接**引用订阅通知消息**回复 |
 
 #### 新建会话交互向导流程：
 1. **工作区选择 (第 1 步)**：发送 `/new`，操作板展示所有已有工作区（如 `📁 免费:~ (远程)`, `📁 qq-bot`, `📁 AutoAim`）及【🔍 浏览并选择目录】。
@@ -321,7 +334,9 @@ pnpm test
 ✔ QQGatewayClient (6 tests passed)
 ✔ QQ scan-to-bind protocol (11 tests passed)
 ✔ ApprovalHandler / multi-question (5 tests passed)
-✔ MessageBridge (27 tests passed)
+✔ MessageBridge (33 tests passed)
+✔ subscription intervals / digest / store / scheduler (23 tests passed)
+✔ subscription HTTP route (7 tests passed)
 ✔ Task overview (11 tests passed)
 ✔ Usage billing integration (12 tests passed)
 ✔ dsh-token-metrics integration (11 tests passed)
@@ -330,8 +345,8 @@ pnpm test
 ✔ qq_render_text_image tool (14 tests passed)
 ✔ AdminInventory (27 tests passed)
 ✔ qq_send_file tool (20 tests passed)
-ℹ tests 277
-ℹ pass 276
+ℹ tests 328
+ℹ pass 327
 ℹ skipped 1
 ℹ fail 0
 ```

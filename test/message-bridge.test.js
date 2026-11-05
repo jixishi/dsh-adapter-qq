@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import { MessageBridge, displayWorkspacePath, resolvePermissionLabel, resolvePresetLabel } from '../lib/sync/message-bridge.js';
+import { SubscriptionStore } from '../lib/sync/subscriptions.js';
 
 describe('MessageBridge', () => {
   function createTestHarness() {
@@ -923,4 +924,180 @@ describe('MessageBridge', () => {
     assert.ok(detail.includes('office'));
     harness.bridge.stop();
   });
+
+  it('should buffer a subscribed non-active session and push one coalesced digest', async () => {
+    const harness = createTestHarness();
+    const { bridge, sentMessages } = harness;
+
+    // Wire a store whose clock we control, plus a scheduler that we drive manually.
+    const clock = { value: 1_700_000_000_000 };
+    const store = new SubscriptionStore({ filePath: '', now: () => clock.value, logger: { warn() {} } });
+    await store.subscribe({ sessionId: 'sess-2', title: '界面重叠分析', intervalMinutes: 5 });
+    bridge.subscriptionStore = store;
+    bridge.subscriptionScheduler = { arm() {} };
+
+    // sess-2 is NOT the active session (sess-1), which is exactly the case the
+    // active-session filter used to drop on the floor.
+    const event = (text, at) => ({
+      type: 'assistant/message',
+      data: { message: { content: [{ type: 'text', text }] }, at },
+    });
+
+    await bridge.handleDshSessionEvent({ id: 'sess-2' }, event('第一段输出', clock.value));
+    clock.value += 40_000;
+    await bridge.handleDshSessionEvent({ id: 'sess-2' }, event('第二段输出', clock.value));
+
+    assert.equal(store.buffers.get('sess-2').messages.length, 2);
+    // Nothing has been pushed yet: the window has not closed.
+    assert.equal(sentMessages.length, 0);
+
+    clock.value += 5 * 60_000;
+    assert.deepEqual(store.dueSessionIds(), ['sess-2']);
+
+    const digest = store.digestFor('sess-2');
+    await bridge.flushSubscriptionDigest('sess-2', digest);
+
+    assert.equal(sentMessages.length, 1);
+    const pushed = sentMessages[0].msg;
+    assert.ok(pushed.markdown.includes('第一段输出'));
+    assert.ok(pushed.markdown.includes('第二段输出'));
+    assert.ok(pushed.markdown.includes('界面重叠分析'));
+    // Quick-reply and management affordances must be attached.
+    assert.ok(pushed.keyboard, 'digest must carry an inline keyboard');
+    const flat = JSON.stringify(pushed.keyboard);
+    assert.ok(flat.includes('/reply sess-2'));
+    assert.ok(flat.includes('/unsubscribe sess-2'));
+    assert.ok(flat.includes('/switch sess-2'));
+
+    harness.bridge.stop();
+  });
+
+  it('should ignore background events for sessions that are not subscribed', async () => {
+    const harness = createTestHarness();
+    const clock = { value: 1_700_000_000_000 };
+    const store = new SubscriptionStore({ filePath: '', now: () => clock.value, logger: { warn() {} } });
+    harness.bridge.subscriptionStore = store;
+    harness.bridge.subscriptionScheduler = { arm() {} };
+
+    await harness.bridge.handleDshSessionEvent(
+      { id: 'sess-2' },
+      { type: 'assistant/message', data: { message: { content: [{ type: 'text', text: '不该被捕获' }] } } }
+    );
+    assert.equal(store.buffers.size, 0);
+    harness.bridge.stop();
+  });
+
+  it('should route a quick reply to the target session without switching the active one', async () => {
+    const harness = createTestHarness();
+    const { bridge } = harness;
+    const prompts = [];
+    harness.ctx.on('prompt_received', (req) => prompts.push(req));
+
+    // Arm a directed reply to sess-2.
+    await bridge.cmdReply('user_target', ['sess-2'], 'msg_reply_arm');
+    const armAck = harness.sentMessages.at(-1).msg.markdown;
+    assert.ok(armAck.includes('已进入定向回复'));
+    assert.ok(armAck.includes('sess-2'));
+
+    // The next free-text message must land on sess-2, not on the active sess-1.
+    await bridge.handleUserPrompt('user_target', '看下这个报错', [], 'msg_reply_body');
+    await new Promise((r) => setTimeout(r, 10));
+
+    assert.equal(prompts.length, 1);
+    assert.equal(prompts[0].sessionId, 'sess-2');
+    // Session focus is untouched.
+    assert.equal(await harness.bridge.sessionManager.getActiveSessionId(), 'sess-1');
+
+    // One-shot: the target is consumed, so a further message goes back to sess-1.
+    await bridge.handleUserPrompt('user_target', '第二条', [], 'msg_reply_body_2');
+    await new Promise((r) => setTimeout(r, 10));
+    assert.equal(prompts.length, 2);
+    assert.equal(prompts[1].sessionId, 'sess-1');
+
+    harness.bridge.stop();
+  });
+
+  it('should dispatch an immediate /reply <session> <text> in one command', async () => {
+    const harness = createTestHarness();
+    const prompts = [];
+    harness.ctx.on('prompt_received', (req) => prompts.push(req));
+
+    harness.gateway.emit('c2c_message', {
+      id: 'msg_direct',
+      author: { user_openid: 'user_target' },
+      content: '/reply sess-2 直接发过去',
+    });
+    await new Promise((r) => setTimeout(r, 30));
+
+    assert.equal(prompts.length, 1);
+    assert.equal(prompts[0].sessionId, 'sess-2');
+    const texts = (prompts[0].content || []).filter((p) => p.type === 'text').map((p) => p.text).join('\n');
+    assert.ok(texts.includes('直接发过去'));
+    // A confirmation is sent back.
+    assert.ok(harness.sentMessages.some((m) => String(m.msg.markdown || '').includes('已定向发送到')));
+    harness.bridge.stop();
+  });
+
+  it('should answer subscription commands and keep the store in sync', async () => {
+    const harness = createTestHarness();
+    const { bridge } = harness;
+    const clock = { value: 1_700_000_000_000 };
+    const store = new SubscriptionStore({ filePath: '', now: () => clock.value, logger: { warn() {} } });
+    bridge.subscriptionStore = store;
+    bridge.subscriptionScheduler = { arm() {} };
+
+    // /subscribe <session> <interval>
+    await bridge.cmdSubscribe('user_target', ['sess-2', '15'], 'msg_sub');
+    assert.equal(store.has('sess-2'), true);
+    assert.equal(store.get('sess-2').intervalMinutes, 15);
+    assert.ok(harness.sentMessages.at(-1).msg.markdown.includes('已开启会话订阅'));
+
+    // /subscribe again with a different interval edits it in place
+    await bridge.cmdSubscribe('user_target', ['sess-2', '30'], 'msg_sub2');
+    assert.equal(store.get('sess-2').intervalMinutes, 30);
+    assert.equal(store.list().length, 1);
+
+    // /subscriptions lists it with interval and pending count
+    store.enqueue('sess-2', { text: 'pending message', at: clock.value });
+    await bridge.cmdSubscriptions('user_target', 'msg_list');
+    const listing = harness.sentMessages.at(-1).msg.markdown;
+    assert.ok(listing.includes('订阅列表'));
+    assert.ok(listing.includes('30 分钟'));
+    assert.ok(listing.includes('待推 1'));
+
+    // /unsubscribe removes it
+    await bridge.cmdUnsubscribe('user_target', ['sess-2'], 'msg_off');
+    assert.equal(store.has('sess-2'), false);
+    assert.ok(harness.sentMessages.at(-1).msg.markdown.includes('已取消订阅'));
+
+    harness.bridge.stop();
+  });
+
+  it('should resolve a reply-to notification back to its session', async () => {
+    const harness = createTestHarness();
+    const { bridge } = harness;
+    const clock = { value: 1_700_000_000_000 };
+    const store = new SubscriptionStore({ filePath: '', now: () => clock.value, logger: { warn() {} } });
+    await store.subscribe({ sessionId: 'sess-2', title: '界面重叠分析', intervalMinutes: 5 });
+    bridge.subscriptionStore = store;
+    bridge.subscriptionScheduler = { arm() {} };
+
+    store.enqueue('sess-2', { text: '后台输出', at: clock.value });
+    clock.value += 5 * 60_000;
+    await bridge.flushSubscriptionDigest('sess-2', store.digestFor('sess-2'));
+
+    // The mock client returns `msg_1`…`msg_N` ids; the last one is our notice.
+    const noticeId = `msg_${harness.sentMessages.length}`;
+    assert.equal(bridge.subscriptionNoticeByMsgId.has(noticeId), true);
+
+    const prompts = [];
+    harness.ctx.on('prompt_received', (req) => prompts.push(req));
+    await bridge.handleUserPrompt('user_target', '就这个问题继续', [], 'msg_follow', noticeId);
+    await new Promise((r) => setTimeout(r, 10));
+
+    assert.equal(prompts.length, 1);
+    assert.equal(prompts[0].sessionId, 'sess-2');
+    harness.bridge.stop();
+  });
+
 });
