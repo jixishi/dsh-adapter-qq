@@ -46,7 +46,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Commands: `/subscribe` (`/订阅`), `/subscriptions` (`/订阅列表`),
   `/unsubscribe` (`/取消订阅`), `/reply` (`/回复`); bottom-menu name mapping and
   `/help` entries updated.
-- Tests: 41 new cases (339 total, 338 pass, 1 skipped).
+- **Relative activity time + workspace grouping in the subscription pane.**
+  - Every row now shows how long ago the session was last active, using the same
+    units and wording as the DSH left sidebar (`刚刚 / N分钟 / N小时 / N天 /
+    N个月 / N年`, taken from `dsh-client-ui-workspace`'s `time.*` locale keys plus
+    `relativeTime`). Missing, zero and future timestamps all collapse to `刚刚`
+    rather than rendering `NaN` or a negative duration.
+  - The "add subscription" picker is grouped by workspace (final path segment),
+    newest workspace first and newest session first inside each group. Groups are
+    keyed by the full path, so two projects sharing a tail segment
+    (`W:/x/proj` vs `W:/z/proj`) stay apart.
+  - `formatRelativeTime` / `workspaceLabel` / `groupByWorkspace` live in
+    `lib/sync/display-time.js`; the route attaches `updatedLabel`, `workspace`
+    and `workspaceGroups` to the list payload, and accepts an injectable `now()`
+    for deterministic tests.
+- Tests: 52 new cases (350 total, 349 pass, 1 skipped).
 
 ### Fixed
 
