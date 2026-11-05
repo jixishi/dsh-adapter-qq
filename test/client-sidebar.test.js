@@ -137,12 +137,32 @@ describe('client sidebar registration contract', () => {
     assert.ok(!instance.inject.includes('sidebarRightTabs'));
   });
 
-  it('renders the sidebar icon without props', () => {
+  it('renders a monochrome SVG icon that matches the built-in sidebar glyphs', () => {
     const { instance, ctx, registrations } = loadClient();
     instance.apply(ctx);
     const entry = registrations.find((row) => row.options.name === 'sidebar.panellist');
     const output = entry.component({});
-    assert.ok(JSON.stringify(output.children).includes('🔔'));
+
+    // The left column is a set of stroked line icons; an emoji would be the one
+    // coloured glyph there and cannot follow the theme.
+    assert.equal(output.type, 'svg');
+    assert.equal(output.props.viewBox, '0 0 16 16');
+    assert.equal(output.props.stroke, 'currentColor');
+    assert.equal(output.props.fill, 'none');
+    assert.ok(output.children.length > 0, 'the icon needs path data');
+    // No emoji anywhere in the rendered tree.
+    assert.ok(!/[\u{1F300}-\u{1FAFF}]/u.test(JSON.stringify(output)), 'emoji glyph in the sidebar icon');
+  });
+
+  it('honours the host-provided icon size and defaults to 16', () => {
+    const { instance, ctx, registrations } = loadClient();
+    instance.apply(ctx);
+    const entry = registrations.find((row) => row.options.name === 'sidebar.panellist');
+    assert.equal(entry.component({}).props.width, 16);
+    assert.equal(entry.component({ size: 14 }).props.width, 14);
+    assert.equal(entry.component({ size: 20 }).props.height, 20);
+    // A junk size must not leak NaN into the SVG attributes.
+    assert.equal(entry.component({ size: 'big' }).props.width, 16);
   });
 
   it('renders the main panel without throwing', () => {

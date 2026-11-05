@@ -46,6 +46,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Commands: `/subscribe` (`/订阅`), `/subscriptions` (`/订阅列表`),
   `/unsubscribe` (`/取消订阅`), `/reply` (`/回复`); bottom-menu name mapping and
   `/help` entries updated.
+- **Sidebar row matches the built-in icon style.** The left column renders
+  monochrome stroked SVG glyphs; this row used a coloured 🔔 emoji, which broke
+  both the visual language and theme following. Replaced with an inline
+  `<svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.2">` bell that
+  takes the host's `size` prop (default 16, junk values fall back). Decorative
+  emoji were also dropped from the pane's buttons, group headers and running
+  marker; only the semantic warning glyph stays, and the group header now shares
+  the row padding so labels line up.
 - **Relative activity time + workspace grouping in the subscription pane.**
   - Every row now shows how long ago the session was last active, using the same
     units and wording as the DSH left sidebar (`刚刚 / N分钟 / N小时 / N天 /
@@ -60,7 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     `lib/sync/display-time.js`; the route attaches `updatedLabel`, `workspace`
     and `workspaceGroups` to the list payload, and accepts an injectable `now()`
     for deterministic tests.
-- Tests: 52 new cases (350 total, 349 pass, 1 skipped).
+- Tests: 53 new cases (351 total, 350 pass, 1 skipped).
 
 ### Fixed
 
