@@ -37,6 +37,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **测试 fixture 的 cwd 改成可移植路径**（PR #3）。`test/message-bridge.test.js` 把会话 cwd 写死为 `F:/dsh-plugin/qq-bot`：Windows 上是绝对路径，POSIX 上是**相对**路径，而附件用例会走真实的 `join(sessionCwd, 'uploads')` 落盘，于是 Linux/macOS 每次跑测试都在仓库根目录造一个字面量 `F:` 目录 —— 因为落在已忽略的 `uploads/` 里，`git status` 还看不见。
   - 改为 `tmpdir()` 下的 fixture，并在测试结束后删除；顺带补上 `getSessionInfoById` 桩（缺它时附件路径会回退到 `process.cwd()`），并新增断言确认两个附件确实落在 fixture 的 `uploads/` 下。
 
+### Added
+
+- **宿主重启后补发中断提示**（Issue #8 第二层）。第一层只解释「轮次在**同一个进程内**结束」，这一层覆盖另一半：**进程本身消失**。宿主重启、崩溃或 HMR 重载时，正在跑的轮次不会发出 `turn/end`，内存里的状态也随之消失，QQ 端又只剩一个停掉的「正在输入」。
+  - 新增 `lib/sync/turn-ledger.js`：把在途轮次写到 `$DSH_HOME/adapter-qq/active-turns.json`（会话、接收人、轮次号、最后工具、bootId、更新时间），原子写（临时文件 + rename）。
+  - `turn/start` 记账，工具变化时刷新，`turn/end` 时清除。
+  - **优雅退出保护**：进程退出时产生的 `aborted (disposed)` 如果照常清除，就会删掉下一次启动恰恰需要的记录。`SIGTERM` / `SIGINT` 与插件 dispose 会把账本标记为「正在退出」，此时 `clear()` 不生效。
+  - 在 **gateway ready** 之后（不能更早：机器人还发不出消息时推送等于丢失）读取**属于更早 boot** 的条目，按时间倒序逐条播报并消费；超过 24 小时的条目直接丢弃 —— 一天前的「还在运行」是噪音而不是信息。
+  - **默认关闭**（新设置 `notifyRestartRecovery`）。账本无论开关都会写，所以以后打开仍能生效。
+  - 文案只说「进程退出了」，不编造失败原因，并提示「直接发消息即可接着往下做」。
+  - `currentBootId()` 增加随机后缀：同一 pid 在同一毫秒内重启两次会被判成同一次启动，从而把残留轮次当成自己的而保持沉默。
+
 ## [0.2.4] - 2026-11-06
 
 ### Added

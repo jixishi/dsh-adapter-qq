@@ -26,6 +26,7 @@
 - **沙箱模式默认开启**：机器人正式上线前请保持开启，并在开放平台「测试人员管理」中加入您的 QQ 号。
 - **修复**：订阅定时推送从不触发（`start()` → `stop()` 把调度器置空）、「立即推送」只推已到期会话、发送失败丢消息、失败重试风暴、渲染输出目录不可写导致图片退化为 Markdown 排版、面板高度写死、左栏图标风格不一致。
 - **轮次异常结束播报**：一轮因报错/超限/被拦截/中断结束时，QQ 会收到状态提示（含停在哪一步工具、错误摘要）+ 操作板；用户自己 `/cancel` 的那次不会重复播报。设置项 `notifyTurnAbnormal` 默认开启。
+- **宿主重启恢复**：轮次在重启/崩溃/HMR 时被中断的话，启动并连上 QQ 后可补发一条中断提示（默认**关闭**，设置项 `notifyRestartRecovery`；账本始终记录，打开即生效）。
 - **插话方式可选**：`busyDelivery` 决定运行中发普通文本是「立即插话」还是「排队等本轮结束」，`/delivery` 可切换，`/steer`、`/queue` 单次覆盖，底部菜单也有「插话方式」入口。
 - **会话卡显示最后一条用户消息**：`/sessions`、`/current` 与切换会话卡会带上「最后一条用户消息」或「最近一轮提问」。
 - **审批不再被 Web UI 的「未接手」误判**：`unavailable` 不再当作「已拒绝」，QQ 卡片保持有效，也不再发假同步通知。
@@ -231,6 +232,7 @@ dsh plugin --profile web add github:jixishi/dsh-adapter-qq
 | `subscriptionSendMode` | 订阅汇聚通知发送形式：`text`（默认，超长自动转图片）/ `auto` / `image`（总是图片） | `text` |
 | `busyDelivery` | Agent 运行中时普通文本如何投递：`steer` 立即插话 / `queue` 本轮结束后发送 | `steer` |
 | `notifyTurnAbnormal` | 轮次非正常结束时向 QQ 推送状态提示 | `true` |
+| `notifyRestartRecovery` | 宿主重启后补发在途轮次的中断提示 | `false` |
 | `mcpManagerToken` | `@xxxyz/dsh-mcp-manager` 写操作令牌（可选，密文遮罩；也可用环境变量 `DSH_MCP_MANAGER_TOKEN`） | `""` |
 
 保存后，插件会立即热重载配置并自动建立 WebSocket 连接，无需重启 DSH。

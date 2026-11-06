@@ -24,6 +24,7 @@ import './usage.test.js';
 import './token-metrics.test.js';
 import './turn-notice.test.js';
 import './turn-end-bridge.test.js';
+import './turn-ledger.test.js';
 import './render-template.test.js';
 import './render.test.js';
 import './typst.test.js';
