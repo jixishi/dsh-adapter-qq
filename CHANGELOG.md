@@ -72,7 +72,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     `lib/sync/display-time.js`; the route attaches `updatedLabel`, `workspace`
     and `workspaceGroups` to the list payload, and accepts an injectable `now()`
     for deterministic tests.
-- Tests: 66 new cases (364 total, 363 pass, 1 skipped).
+- Tests: 76 new cases (375 total, 374 pass, 1 skipped).
+
+### Added
+
+- **Over-long subscription digests are delivered as an image.** QQ truncates a
+  single markdown message beyond ~4000 characters, so a digest that exceeds the
+  budget (3800, the same figure the plugin already uses for reply chunking) is
+  rendered with the embedded Typst engine and sent as a picture instead of being
+  cut off. New setting `subscriptionSendMode`:
+  - `text` (**default**) — plain markdown, switching to an image only when too long
+  - `auto` — image only when too long (same effect as `text`, kept for explicitness)
+  - `image` — always render
+
+  Rendering failure falls back to text (trimmed, with a note) rather than dropping
+  the notification. The action keyboard is sent as a short companion message
+  because QQ keyboards attach to text, not media.
+- `fitDigestForImage()` bounds the rendered height: a 30-message digest otherwise
+  produced a 1800x12685 image that QQ scales into unreadable text. The body is
+  trimmed on a line boundary with an explicit "已截断，完整 N 条请在 Web UI 查看"
+  subtitle; measured 1800x6618 after the cap.
+
+### Removed
+
+- **The self-imposed "5 previews" fold.** It was never a requirement: it dropped
+  messages from the digest and — worse — kept every digest under the character
+  budget, which made the "too long → send an image" rule unreachable. The digest
+  now represents every buffered message; the delivery form is decided by the
+  measured length, and `full` mode only widens the per-message preview.
 
 ### Changed
 

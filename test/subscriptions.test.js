@@ -81,7 +81,7 @@ describe('subscription digest', () => {
     assert.ok(digest.markdown.includes('/unsubscribe'));
   });
 
-  it('collapses long windows and keeps head and tail', () => {
+  it('includes every buffered message instead of folding to a fixed count', () => {
     const at = Date.now();
     const messages = Array.from({ length: 12 }, (_, index) => ({
       text: `消息 ${index + 1}`,
@@ -89,11 +89,27 @@ describe('subscription digest', () => {
     }));
     const digest = buildSubscriptionDigest({ title: '很多', sessionId: 's', messages });
     assert.equal(digest.count, 12);
-    assert.ok(digest.markdown.includes('省略 7 条'));
-    // First three and last two survive.
-    for (const needle of ['消息 1', '消息 2', '消息 3', '消息 11', '消息 12']) {
-      assert.ok(digest.markdown.includes(needle), `digest must keep ${needle}`);
+    // No artificial "5 previews" cap: dropping content was never a requirement and
+    // it also kept digests under the length budget, making the image fallback dead
+    // code. Delivery form is decided by measured length, not by discarding text.
+    assert.ok(!digest.markdown.includes('省略'), 'nothing may be elided');
+    for (let i = 1; i <= 12; i += 1) {
+      assert.ok(digest.markdown.includes(`消息 ${i}`), `digest must keep 消息 ${i}`);
     }
+  });
+
+  it('grows past the single-message budget once enough messages accumulate', () => {
+    const at = Date.now();
+    const make = (n) =>
+      Array.from({ length: n }, (_, i) => ({
+        text: `第${i + 1}条：${'内容'.repeat(120)}`,
+        at: at + i * 1000,
+      }));
+    // This is what makes "too long -> send an image" reachable at all.
+    const small = buildSubscriptionDigest({ title: 't', sessionId: 's', messages: make(5) });
+    const large = buildSubscriptionDigest({ title: 't', sessionId: 's', messages: make(30) });
+    assert.ok(small.markdown.length <= 3800, `5 条不该超限: ${small.markdown.length}`);
+    assert.ok(large.markdown.length > 3800, `30 条应当超限: ${large.markdown.length}`);
   });
 
   it('handles an empty window without throwing', () => {

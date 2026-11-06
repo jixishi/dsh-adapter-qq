@@ -57,6 +57,7 @@
   - **订阅非活跃会话**：`/subscribe <会话> [分钟]` 或侧栏「订阅管理」面板。被订阅的会话在后台产生 `assistant/message` 或阻塞式提问时，不会立刻打扰你，而是先进入缓冲。
   - **定时汇聚**：汇聚窗口从**该会话的第一条**消息开始计时，窗口内到达的多条消息合并成**一条摘要**推送；窗口关闭后重新计时。连续不断的消息不会把推送无限推迟。
   - **间隔可按会话独立配置**：`1 / 5 / 15 / 30 / 60` 分钟（默认 5），手改存储里的非法值会吸附到最近档位，不会产生异常定时器。
+  - **超长自动转图片**：QQ 单条消息约 4000 字符上限，汇聚内容超限时用内嵌 Typst 渲染成图片发送（图片高度也做了上限，超出会截断并注明）。配置项 `subscriptionSendMode` 可选 `text`（默认，超长才转图）/ `auto` / `image`（总是图片）。
   - **通知带操作按钮**：每条摘要附带「📖 查看 / 💬 快速回复 / 🛑 取消订阅 / 📋 订阅列表」。
   - **快速回复不切会话**：点「快速回复」或发 `/reply <会话> <内容>`，消息直接投递到目标会话；`/reply <会话>` 进入一次性定向态，**只对下一条消息生效**，当前活跃会话保持不变。
   - **引用即回复**：直接对订阅通知消息使用 QQ 的「回复」发送内容，会自动路由回该会话（按通知消息 ID 反查，最多保留最近 200 条）。
@@ -220,6 +221,7 @@ dsh plugin --profile web add github:jixishi/dsh-adapter-qq
 | `streamIntervalMs` | 流式推送间隔（毫秒，500–10000） | `1500` |
 | `renderWidth` | 文本渲染图片的像素宽度（480–1600） | `900` |
 | `renderTheme` | 文本渲染图片主题（`light` / `dark`） | `light` |
+| `subscriptionSendMode` | 订阅汇聚通知发送形式：`text`（默认，超长自动转图片）/ `auto` / `image`（总是图片） | `text` |
 | `mcpManagerToken` | `@xxxyz/dsh-mcp-manager` 写操作令牌（可选，密文遮罩；也可用环境变量 `DSH_MCP_MANAGER_TOKEN`） | `""` |
 
 保存后，插件会立即热重载配置并自动建立 WebSocket 连接，无需重启 DSH。
@@ -337,6 +339,7 @@ pnpm test
 ✔ MessageBridge (33 tests passed)
 ✔ subscription intervals / digest / store / scheduler (29 tests passed)
 ✔ subscription lifecycle / delivery safety (6 tests passed)
+✔ subscription delivery form / image height budget (10 tests passed)
 ✔ subscription HTTP route (7 tests passed)
 ✔ client sidebar registration contract (6 tests passed)
 ✔ subscription pane layout adapts to the viewport (6 tests passed)
@@ -349,8 +352,8 @@ pnpm test
 ✔ qq_render_text_image tool (14 tests passed)
 ✔ AdminInventory (27 tests passed)
 ✔ qq_send_file tool (20 tests passed)
-ℹ tests 364
-ℹ pass 363
+ℹ tests 375
+ℹ pass 374
 ℹ skipped 1
 ℹ fail 0
 ```

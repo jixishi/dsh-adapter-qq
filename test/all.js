@@ -13,6 +13,7 @@ import './subscriptions.test.js';
 import './subscription-route.test.js';
 import './subscription-layout.test.js';
 import './subscription-lifecycle.test.js';
+import './subscription-delivery.test.js';
 import './display-time.test.js';
 import './stream-reply.test.js';
 import './task-overview.test.js';
