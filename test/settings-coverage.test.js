@@ -119,3 +119,22 @@ describe('sections are bordered cards', () => {
     assert.match(rule[1], /font-weight:\s*600/);
   });
 });
+
+describe('settings body spacing', () => {
+  it('has no side margin, keeping only vertical breathing room', () => {
+    const rule = /\.dsh-qq-body \{([\s\S]*?)\}/.exec(CLIENT);
+    assert.ok(rule, '.dsh-qq-body rule exists');
+    const body = rule[1];
+
+    const margin = /margin:\s*([^;]+);/.exec(body);
+    assert.ok(margin, 'the rule declares a margin');
+    const value = margin[1].trim();
+    // Any of "0", "0px", "0 0" means no horizontal side margin.
+    assert.match(value, /^0(px)?( 0(px)?)?$/, `body must not inset sideways, got margin: ${value}`);
+
+    // Vertical spacing is what should remain.
+    const padding = /padding:\s*([^;]+);/.exec(body);
+    assert.ok(padding, 'the rule declares padding');
+    assert.match(padding[1].trim(), /\d+px 0 \d+px/, 'vertical padding kept, horizontal padding stays 0');
+  });
+});
