@@ -224,14 +224,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - 改为 `tmpdir()` 下的 fixture，并在测试结束后删除；顺带补上 `getSessionInfoById` 桩（缺它时附件路径会回退到 `process.cwd()`），并新增断言确认两个附件确实落在 fixture 的 `uploads/` 下。
 - `byDayModelsSite` uses the `{ day: { model: { site: cell } } }` shape the
   aggregator expects; the flattened shape produced a table of `***` rows.
-- **Card pictures silently lost their template.** `ensureOutputDir()` only probed
-  `mkdir`: `%DSH_HOME%\adapter-qq\renders` existed and `mkdir` succeeded, but
-  creating files inside it was denied by the Windows ACL. The renderer therefore
-  picked an unusable directory, Typst wrote nothing, the headless browser is
-  unavailable in this host, Pillow hit the same `EACCES`, and the SVG writer threw
-  `EPERM` — so what reached QQ was a degraded render rather than the card layout.
-  The check now writes and removes a real probe file before accepting a directory,
-  falling back to the temp dir and then to a per-process `mkdtemp`.
+- **Card pictures silently lost their template.** Two causes, found in
+  sequence. First, `ensureOutputDir()` accepted a directory on `mkdir` alone, so a
+  path that exists but refuses new files could be chosen; the check now writes and
+  removes a real probe file before committing. Second — and this is what actually
+  produced the plain-text pictures — Typst was asked to create the PNG itself
+  (`typst compile doc.typ <outPath>`), which a confined host denies with
+  `EACCES`; the headless browser is unavailable there, so the render fell through
+  to Pillow, which ignores the card body and draws Markdown as text. Typst now
+  compiles to stdout and Node persists the bytes, so the renderer never opens a
+  file for writing.
 - **`/tasks`, `/status` and `/jobs` never passed `typstBody`.** They handed raw
   Markdown to the generic renderer, so their pictures could not look like
   `/usage` or `/stats`. Added `buildScheduleTypst()` and

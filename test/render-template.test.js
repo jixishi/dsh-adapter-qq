@@ -107,6 +107,21 @@ describe('task card template', () => {
   });
 });
 
+describe('configured output directory', () => {
+  it('is used whenever it accepts a write, without moving into the package', async () => {
+    // $DSH_HOME/adapter-qq/renders is the documented location; renders only move
+    // elsewhere when that directory actually refuses a write.
+    const dir = fs.mkdtempSync(join(os.tmpdir(), 'dsh-outdir-'));
+    try {
+      const rendered = await renderTextImage({ text: '# hi', title: 'T', width: 600, outDir: dir });
+      assert.equal(rendered.path.startsWith(dir) || rendered.path.includes('dsh-outdir-'), true);
+      assert.ok(!rendered.path.includes('.renders'), 'the configured directory wins');
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
 describe('render fallback directory', () => {
   it('keeps the plugin-local directory inside the package', () => {
     const dir = pluginOutputDir();
