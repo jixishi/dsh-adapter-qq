@@ -1,5 +1,10 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 import fsp from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -122,5 +127,22 @@ describe('Typst engine rendering', () => {
     } finally {
       await fsp.rm(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('typst output channel', () => {
+  // A confined host opens the child's stdout itself; a renderer that opens the
+  // output path gets EACCES. Typst therefore compiles to `-` and Node persists the
+  // bytes. Regressing this silently downgrades every card to the Pillow fallback.
+  const TYPST = fs.readFileSync(join(REPO_ROOT, 'lib', 'render', 'typst.js'), 'utf8');
+
+  it('writes the PNG to stdout instead of letting the child create the file', () => {
+    assert.match(TYPST, /args\.push\(typPath, '-'\)/, 'compile target must be stdout');
+    assert.doesNotMatch(TYPST, /args\.push\(typPath, outPath\)/, 'the child must not open outPath');
+  });
+
+  it('persists the captured bytes itself', () => {
+    assert.match(TYPST, /const stdoutPath = path\.join\(tmpDir, 'out\.png'\)/);
+    assert.match(TYPST, /await fsp\.writeFile\(outPath, png\)/, 'Node writes the final file');
   });
 });
