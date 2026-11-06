@@ -20,6 +20,7 @@ import './update-route.test.js';
 import './cards.test.js';
 import './schedule-notices.test.js';
 import './helpers.test.js';
+import './apply-stamp.test.js';
 import './subscription-layout.test.js';
 import './subscription-lifecycle.test.js';
 import './subscription-delivery.test.js';

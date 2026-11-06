@@ -406,4 +406,26 @@ describe('pane chrome survives the tab split', () => {
     assert.ok(pane, 'tasksView exists');
     assert.match(pane[1], /"刷新"/, 'the task tab can be refreshed');
   });
+
+  it('keeps the task switch compact instead of a full-width bar', () => {
+    // The button used to be a direct child of the column-flex item, so it stretched
+    // across the whole row. It now sits in the head row beside a stacked title.
+    assert.match(CLIENT, /className: "dsh-sub-item-main"/);
+    assert.match(CLIENT, /\.dsh-sub-item-head \.dsh-sub-btn \{ flex: 0 0 auto/);
+
+    const block = /\.\.\.state\.tasks\.map\(\(task\) =>([\s\S]*?)\n\s*\)\n\s*\)\s*:/.exec(CLIENT);
+    assert.ok(block, 'the task item block exists');
+    const mainAt = block[1].indexOf('"dsh-sub-item-main"');
+    const buttonAt = block[1].indexOf('dsh-sub-btn');
+    assert.ok(mainAt > 0, 'the task row has a stacked main column');
+    assert.ok(buttonAt > mainAt, 'the switch is rendered inside the head row, after the title column');
+  });
+
+  it('describes each task with status, plan time and last notice', () => {
+    assert.match(CLIENT, /const formatTaskMoment = /);
+    assert.match(CLIENT, /计划 \$\{planned\}/);
+    assert.match(CLIENT, /上次通知 \$\{notified\}/);
+    assert.match(CLIENT, /"尚未通知"/);
+    assert.match(CLIENT, /\.dsh-sub-task-section \.dsh-sub-group-head \{\n      position: static;/);
+  });
 });
