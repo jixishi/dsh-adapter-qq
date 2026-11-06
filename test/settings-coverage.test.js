@@ -138,3 +138,33 @@ describe('settings body spacing', () => {
     assert.match(padding[1].trim(), /\d+px 0 \d+px/, 'vertical padding kept, horizontal padding stays 0');
   });
 });
+
+describe('update section', () => {
+  it('gives every external link an icon', () => {
+    const links = [...CLIENT.matchAll(/React\.createElement\(IconLink, \{([\s\S]{0,220}?)\}\)/g)].map((m) => m[1]);
+    assert.equal(links.length, 4, 'npm / repo / releases / issues');
+    for (const block of links) {
+      assert.match(block, /href: "https:\/\//, 'each link has an absolute https target');
+      assert.match(block, /label: "/, 'each link has a label');
+      assert.match(block, /path: ICON_/, 'each link has an icon path');
+    }
+    // The stroked icon system, matching the sidebar glyph.
+    assert.match(CLIENT, /viewBox: "0 0 16 16"/);
+    assert.match(CLIENT, /stroke: "currentColor"/);
+  });
+
+  it('ships the four icon path sets', () => {
+    for (const name of ['ICON_PACKAGE', 'ICON_BRANCH', 'ICON_TAG', 'ICON_CHAT']) {
+      assert.match(CLIENT, new RegExp(`const ${name} = \\[`), `${name} must be defined`);
+    }
+  });
+
+  it('checks the update once when the tab opens', () => {
+    assert.match(CLIENT, /fetch\("\/dsh-adapter-qq\/update-check"/);
+    assert.match(CLIENT, /void checkUpdate\(\)/, 'an initial check runs on mount');
+  });
+
+  it('explains a failed check instead of leaving 未知 unexplained', () => {
+    assert.match(CLIENT, /检查接口由宿主提供/);
+  });
+});
