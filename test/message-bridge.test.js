@@ -119,6 +119,9 @@ describe('MessageBridge', () => {
         };
       },
       findSessionByIndex: async (index) => allMockSessions.find((s) => s.index === index) || null,
+      // /switch reports the session's last user message; without this the call is
+      // skipped, which used to hide an undefined-variable crash in that line.
+      resolveLastUserMessage: (sid) => (sid ? { text: `关于 ${sid} 的最后一句话`, exact: true } : null),
       browseDirectory: async (dirPath, page = 1) => ({
         currentPath: dirPath || FIXTURE_ROOT,
         subdirs: ['qq-bot', 'sub-folder'],
@@ -509,6 +512,14 @@ describe('MessageBridge', () => {
     const last = harness.sentMessages[0];
     assert.ok(last.msg.markdown.includes('已切换活跃会话'));
     assert.ok(last.msg.markdown.includes('开发需求单'));
+    // The last-message line used an undeclared identifier, so every real switch
+    // died with "targetId is not defined"; the mock without the helper hid it
+    // because `obj?.method(arg)` skips evaluating `arg`.
+    assert.ok(
+      last.msg.markdown.includes('最后一条用户消息'),
+      'the switch card reports the session last user message'
+    );
+    assert.ok(!last.msg.markdown.includes('命令执行出错'));
     harness.bridge.stop();
   });
 
