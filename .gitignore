@@ -8,3 +8,6 @@ Thumbs.db
 .pnpm-store/
 .recover/
 .mnemon/
+
+# 渲染产物（插件目录回退时的输出位置）
+.renders/

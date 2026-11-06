@@ -1,7 +1,13 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
 import { compareVersions, createUpdateRoute, readLocalVersion } from '../lib/qq/update-route.js';
+
+const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 /**
  * The settings tab asks `/dsh-adapter-qq/update-check` whether a newer version is
@@ -139,5 +145,24 @@ describe('update route', () => {
     } finally {
       globalThis.fetch = original;
     }
+  });
+});
+
+describe('route registration', () => {
+  // The handlers are exercised directly above and in the onboard/subscription
+  // suites, but nothing checked that index.js actually registers them under the
+  // paths the client calls — a rename there would break the UI silently.
+  const INDEX = fs.readFileSync(join(REPO_ROOT, 'lib', 'index.js'), 'utf8');
+
+  it('registers every path the client calls', () => {
+    for (const path of ['/dsh-adapter-qq/api', '/dsh-adapter-qq/subscriptions', '/dsh-adapter-qq/update-check']) {
+      assert.ok(INDEX.includes("path: '" + path + "'"), `${path} must be registered`);
+    }
+  });
+
+  it('wires each path to its own factory', () => {
+    assert.match(INDEX, /path: '\/dsh-adapter-qq\/api',\s*\n\s*handler: createOnboardRoute\(/);
+    assert.match(INDEX, /path: '\/dsh-adapter-qq\/subscriptions',\s*\n\s*handler: createSubscriptionRoute\(/);
+    assert.match(INDEX, /path: '\/dsh-adapter-qq\/update-check',\s*\n\s*handler: createUpdateRoute\(/);
   });
 });

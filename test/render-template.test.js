@@ -1,6 +1,9 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
+
+import { pluginOutputDir, renderTextImage } from '../lib/render/index.js';
 
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -101,5 +104,34 @@ describe('task card template', () => {
     // An empty table would render as a header-only box; the placeholder row keeps
     // the layout sane.
     assert.match(body, /#table\(/);
+  });
+});
+
+describe('render fallback directory', () => {
+  it('keeps the plugin-local directory inside the package', () => {
+    const dir = pluginOutputDir();
+    const repoRoot = new URL('..', import.meta.url).pathname;
+    assert.ok(dir.includes('.renders'), 'the directory is named .renders');
+    assert.ok(!dir.startsWith(os.tmpdir()), 'it is not a temp directory');
+    void repoRoot;
+  });
+
+  it('uses the plugin-local directory when the requested one cannot be created', async () => {
+    // A path whose parent is a FILE cannot be created, which reproduces the
+    // "configured directory is not writable" case without touching ACLs.
+    const blocker = join(os.tmpdir(), `dsh-blocker-${Date.now()}`);
+    fs.writeFileSync(blocker, 'x');
+    try {
+      const rendered = await renderTextImage({
+        text: '# hi',
+        title: 'T',
+        width: 600,
+        outDir: join(blocker, 'renders'),
+      });
+      assert.equal(rendered.engine, 'typst', 'the card engine survives the fallback');
+      assert.ok(rendered.path.includes('.renders'), `fell back inside the package, got ${rendered.path}`);
+    } finally {
+      fs.rmSync(blocker, { force: true });
+    }
   });
 });

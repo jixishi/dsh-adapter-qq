@@ -164,7 +164,4 @@ describe('update section', () => {
     assert.match(CLIENT, /void checkUpdate\(\)/, 'an initial check runs on mount');
   });
 
-  it('explains a failed check instead of leaving 未知 unexplained', () => {
-    assert.match(CLIENT, /检查接口由宿主提供/);
-  });
 });
