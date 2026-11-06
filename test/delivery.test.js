@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { KeyboardBuilder } from '../lib/ui/keyboard.js';
 import { SessionManager } from '../lib/sync/session-manager.js';
 import { MessageBridge } from '../lib/sync/message-bridge.js';
+import { QQApiClient } from '../lib/qq/client.js';
 
 /**
  * PR #4 by @heerxingen: while a turn is running, a plain QQ message can either
@@ -210,6 +211,30 @@ describe('queue listing and actions', () => {
     };
     await h.bridge.cmdQueueSteer('u1', ['abc'], 'm1');
     assert.match(h.sent.at(-1).content, /已开始执行/);
+  });
+});
+
+describe('delivery menu', () => {
+  it('is registered as a submenu, the same way as 权限模式 and 模型与思考', () => {
+    const client = new QQApiClient({ appId: '123', clientSecret: 'sec' });
+    const { items } = client.getDefaultMenu({ usage: true });
+    const delivery = items.find((item) => item.name === '插话方式');
+
+    assert.ok(delivery, 'the menu carries an 插话方式 entry');
+    assert.equal(delivery.type, 'menu', 'it is a submenu, not a flat send_message row');
+    assert.ok(Array.isArray(delivery.sub_menu_items));
+    assert.ok(delivery.sub_menu_items.length <= 5, 'QQ allows at most 5 sub-items');
+    assert.ok(items.length <= 10, 'top-level items must stay <= 10');
+
+    const targets = delivery.sub_menu_items.map((sub) => sub.send_message);
+    assert.deepEqual(targets, ['/delivery steer', '/delivery queue', '/delivery']);
+  });
+
+  it('does not occupy a top-level slot of its own', () => {
+    const client = new QQApiClient({ appId: '123', clientSecret: 'sec' });
+    const { items } = client.getDefaultMenu();
+    const flat = items.filter((item) => item.type !== 'menu').map((item) => item.name);
+    assert.ok(!flat.includes('插话方式'), 'it moved into a submenu');
   });
 });
 
