@@ -88,9 +88,12 @@ describe('SessionManager', () => {
   it('should dynamically list agent presets from ctx.agentPresets', async () => {
     const mockCtx = {
       agentPresets: {
+        // The Host contract is `{ id, name?, description?, order?, broken? }`: no `trust`
+        // field, and the built-in presets ship without a display name.
         list: async () => [
-          { id: 'standard', trust: 'system', name: 'Standard', description: 'Builtin standard' },
-          { id: 'my-custom-preset', trust: 'user', name: 'Custom', description: 'User preset' },
+          { id: 'standard' },
+          { id: 'ptc', order: 2 },
+          { id: 'my-custom-preset', name: 'Custom', description: 'User preset' },
         ],
       },
     };
@@ -98,11 +101,51 @@ describe('SessionManager', () => {
     const manager = new SessionManager({ ctx: mockCtx });
     const presets = await manager.listPresets();
 
-    assert.equal(presets.length, 2);
-    assert.equal(presets[0].id, 'standard');
-    assert.equal(presets[0].trust, 'system');
-    assert.equal(presets[1].id, 'my-custom-preset');
-    assert.equal(presets[1].trust, 'user');
+    assert.deepEqual(
+      presets.map((p) => p.id),
+      ['standard', 'ptc', 'my-custom-preset']
+    );
+    // A built-in preset without a Host name still gets its product label.
+    assert.equal(presets[0].name, '标准模式');
+    assert.equal(presets[0].builtin, true);
+    assert.equal(presets[0].description, '完整编码 Agent，支持文件、Shell、检索、工作流等全量能力');
+    assert.equal(presets[1].name, 'PTC 模式');
+    // A custom preset keeps the metadata its declaration carries.
+    assert.equal(presets[2].name, 'Custom');
+    assert.equal(presets[2].description, 'User preset');
+    assert.equal(presets[2].builtin, false);
+    // The id is never used as the display name when a label exists.
+    assert.ok(presets.every((p) => p.name && p.name !== p.id));
+  });
+
+  it('should fall back to the four built-in presets when the registry is empty', async () => {
+    for (const ctx of [{}, { agentPresets: { list: async () => [] } }]) {
+      const manager = new SessionManager({ ctx });
+      const presets = await manager.listPresets();
+      assert.deepEqual(
+        presets.map((p) => p.id),
+        ['standard', 'ptc', 'minimal', 'cordis']
+      );
+      assert.deepEqual(
+        presets.map((p) => p.name),
+        ['标准模式', 'PTC 模式', '极简模式', '创造模式']
+      );
+      assert.ok(presets.every((p) => p.builtin === true && p.description));
+    }
+  });
+
+  it('should keep a broken preset in the list with its diagnostic', async () => {
+    const mockCtx = {
+      agentPresets: {
+        list: async () => [{ id: 'standard' }, { id: 'wip', name: '实验', broken: 'activation failed' }],
+      },
+    };
+
+    const manager = new SessionManager({ ctx: mockCtx });
+    const presets = await manager.listPresets();
+    const wip = presets.find((p) => p.id === 'wip');
+    assert.equal(wip.broken, 'activation failed');
+    assert.equal(wip.name, '实验');
   });
 
   it('should switch permission mode with friendly aliases', async () => {

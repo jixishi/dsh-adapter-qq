@@ -178,8 +178,9 @@ describe('MessageBridge', () => {
         return { sessionId: 'sess-new', cwd, agentPreset: preset || 'standard', workspaceId };
       },
       listPresets: async () => [
-        { id: 'standard', trust: 'system', name: 'Standard', description: 'Standard mode' },
-        { id: 'ptc', trust: 'system', name: 'PTC', description: 'PTC mode' },
+        // Realistic Host payload: ids only, no `trust`, no display name for built-ins.
+        { id: 'standard' },
+        { id: 'ptc' },
       ],
       switchPreset: async (name) => name,
       listPermissions: () => [
@@ -328,6 +329,59 @@ describe('MessageBridge', () => {
     assert.equal(resolvePermissionLabel('unknown'), '未知');
     assert.equal(resolvePermissionLabel('custom-perm', [{ id: 'custom-perm', name: '自定义权限' }]), '自定义权限');
     assert.equal(resolvePermissionLabel(''), '默认');
+  });
+
+  it('should render /preset with product labels instead of bare ids', async () => {
+    const harness = createTestHarness();
+
+    harness.gateway.emit('c2c_message', {
+      id: 'msg_preset',
+      author: { user_openid: 'user_target' },
+      content: '/preset',
+    });
+
+    await new Promise((r) => setTimeout(r, 10));
+
+    const msg = harness.sentMessages.at(-1).msg;
+    const markdown = msg.markdown;
+    // The current preset is named, not printed as `standard`.
+    assert.ok(markdown.includes('当前会话预设: **标准模式**'), markdown);
+    // Each entry names the preset, keeps the id as a queryable detail, and is tagged by origin.
+    assert.ok(markdown.includes('**标准模式**（`standard`） [内置]'), markdown);
+    assert.ok(markdown.includes('**PTC 模式**（`ptc`） [内置]'), markdown);
+    // The Host has no `trust` field: the old code tagged every preset as 自定义.
+    assert.ok(!markdown.includes('[自定义]'), markdown);
+    assert.ok(markdown.includes(': 完整编码 Agent'), markdown);
+
+    // Buttons show the label; the button payload still sends the id.
+    const buttons = msg.keyboard.content.rows.flatMap((row) => row.buttons);
+    const labels = buttons.map((b) => b.render_data.label);
+    assert.ok(
+      labels.some((label) => label.includes('标准模式')),
+      labels.join(' | ')
+    );
+    const standardButton = buttons.find((b) => b.action.data === '/preset standard');
+    assert.ok(standardButton, 'the command must still carry the preset id');
+
+    harness.bridge.stop();
+  });
+
+  it('should name the preset in the /preset switch receipt', async () => {
+    const harness = createTestHarness();
+
+    harness.gateway.emit('c2c_message', {
+      id: 'msg_preset_switch',
+      author: { user_openid: 'user_target' },
+      content: '/preset ptc',
+    });
+
+    await new Promise((r) => setTimeout(r, 10));
+
+    const markdown = harness.sentMessages.at(-1).msg.markdown;
+    assert.ok(markdown.includes('**PTC 模式**'), markdown);
+    assert.ok(markdown.includes('`ptc`'), markdown);
+
+    harness.bridge.stop();
   });
 
   it('should handle /new wizard: Step 1 shows workspace selection with remote support', async () => {

@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **`/preset` 显示内部 id，并把内置预设标成「自定义」**。宿主 `agentPresets.list()` 返回 `{ id, name?, description?, order?, broken? }` —— **没有 `trust` 字段**，四个内置预设也不带 `name`/`description`。旧代码按 `item.trust === 'system'` 判来源、用 `item.id` 顶名称，于是列表变成 `standard [自定义]: 用户自定义预设`。
+  - 名称：`name` 缺失时回落到共享标签表（标准模式 / PTC 模式 / 极简模式 / 创造模式），描述同理。
+  - 来源：有 `broken` 标「加载失败」，否则按 id 是否属于内置四个标「内置 / 自定义」，不再依赖不存在的字段。
+  - `/preset` 列表、当前预设行、切换回执、选择按键、`/status` 卡片、会话创建回执统一走 `resolvePresetLabel()`，不再直接显示 id。
 - **三个设置项没有 UI 入口**。设置页是手写的字段列表（`updateField("key")` 行），不是按 schema 渲染的表单，因此只加 config 字段不会出现在界面上 —— `busyDelivery`、`notifyTurnAbnormal`、`notifyRestartRecovery` 三个键就处于「能生效但看不见」的状态。已补齐三行，并新增 `test/settings-coverage.test.js` 双向校验 schema 与设置页行：漏行现在是失败测试，而不是静默缺口（`token`、`activeSessionId`、`allowFrom` 作为内部字段排除）。
 - **「插话方式」改为子菜单注册**。原先是一个顶层 `send_message` 项，占掉一个顶层名额（QQ 上限 10）且无法展示可选项。现在与「权限模式」「模型与思考」同构：子菜单下含 立即插话 `/delivery steer`、排队 `/delivery queue`、交互式选择 `/delivery`。
 
