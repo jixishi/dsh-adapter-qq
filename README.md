@@ -3,26 +3,29 @@
 [![Cordis](https://img.shields.io/badge/Cordis-Plugin-blue.svg)](https://github.com/deepseek-ai/deepseek-harness)
 [![QQ Open Platform](https://img.shields.io/badge/QQ%20Open%20Platform-OpenAPI%20v2-green.svg)](https://bot.q.qq.com/wiki/develop/api-v2/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.2.3-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.2.4-blue.svg)](CHANGELOG.md)
 
 `dsh-adapter-qq` 是针对 [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness) 深度定制的 **QQ 官方机器人（C2C 单聊模式）适配器插件**。
 
 通过本插件，你可以在手机或桌面 QQ 聊天窗口中直接与 DSH Agent 进行完整对话，享受 DSH 的全量编码与执行能力（文件读写、Shell 执行、代码运行、子代理、多步规划、工作流），并实现与 **DSH Web UI 实时双向同屏联动**。
 
-> **当前插件版本：0.2.3**。本次更新：`/usage [日|月|年|累计]` 支持统计范围切换，新增费用/调用/Token/缓存等**统计卡片**与**最近 30 天用量热力图**；模型名使用计费目录显示名，站点使用中转登记名称并对未知域名脱敏；渲染图片后的文字说明改为**默认关闭**（`sendOverviewCaption`）。此外新增 GitHub Actions 自动发布 npmjs + GitHub Packages。0.2.1 起支持 **官方扫码绑定**：设置 → 插件 → QQ 机器人 → 「生成绑定二维码」。详见 [CHANGELOG.md](./CHANGELOG.md)。
+> **当前插件版本：0.2.4**。本次更新：新增 **会话订阅**（非活跃会话后台新消息按间隔汇聚推送，支持通知内定向快速回复、左侧导航栏「订阅管理」面板、按工作区分组与相对活跃时间）；`/usage` **超长内容自动转图片**（`subscriptionSendMode`，默认文字优先）并支持 **`dsh-token-metrics` 双数据源**；五个卡片命令（`/usage` `/stats` `/tasks` `/status` `/jobs`）统一为 Typst 卡片模板；**沙箱模式默认开启**；修复订阅定时推送不触发、「立即推送」无效、渲染输出目录不可写导致图片丢失模板等问题。详见 [CHANGELOG.md](./CHANGELOG.md)。
 >
 > **兼容性**：面向 **DSH 0.2.1-rc.3**（`engines.dsh: >=0.2.1-rc.3 <0.3.0`），Node.js ≥ 20。
 > 已适配 DSH 0.2.1 的 `SessionPromptRequest.mode`（`queue`/`steer`）、`ApprovalRequestEvent.agent`、`permissionPresets.catalog()`、`skills` 服务与 `sessionTitle`/`sessionQuery` 标题读取；旧版本 DSH 不再保证兼容。
 
-## 🆕 0.2.3 更新摘要
+## 🆕 0.2.4 更新摘要
 
-- **`/stats` 统计卡片**：会话统计改为 Typst 卡片（8 张指标卡 + Token 明细表），与 `/usage` 视觉统一。
-- **菜单动态预设**：底部菜单新增「模型与思考」「权限模式」子菜单，按**当前模型**的思考等级与已配置权限**动态生成带参数项**（`/effort high`、`/permission workspace-write`）；原交互式 `/effort`、`/permission` 保留。
-- **`/usage` 范围与可视化**：`/usage 日|月|年|累计`（默认本月）；费用/调用/Token/平均成本/缓存命中率/输入输出比/思考占比/峰值日统计卡片；最近 30 天费用热力图；模型名取计费目录显示名，站点名取中转登记名称，未登记域名脱敏。
-- **图片说明默认关闭**：`/usage`、`/status`、`/tasks`、`/jobs`、`/stats` 发完图片后不再补发文字块；需要时在设置中开启 `sendOverviewCaption`。
-- **流式回复开关**：新增 `streamReply`（默认关闭）与 `streamIntervalMs`（默认 1500ms）。开启后按增量持续推送回复文本，结束时只补发未发送的剩余部分，不会重复已显示的内容。
-- **CI 自动发布**：`.github/workflows/publish.yml` 在 `v*` tag 或手动触发时先测试，再发布 npmjs 与 GitHub Packages（GitHub Packages 使用 `@<owner>/dsh-adapter-qq` 作用域副本）。
-- **此前 0.2.2 能力**：会话列表引用块层级、路径/预设/权限可读名称、`/status` `/tasks` `/jobs`、官方扫码绑定。
+- **会话订阅（新）**：`/subscribe <会话> [分钟]` 订阅**非活跃**会话；后台新消息先累积，到间隔（1/5/15/30/60 分钟，默认 5）合并成**一条摘要**推送。连续消息不会推迟截止时间，空窗口不推送。
+- **通知内快速回复**：摘要附「查看 / 快速回复 / 取消订阅 / 订阅列表」按钮；`/reply <会话> [内容]` 可直接定向发送；在 QQ 引用通知消息回复也会路由回该会话，**不切换当前活跃会话**。
+- **订阅管理面板**：左侧导航栏「🔔 订阅管理」（与 Logcat / 插件 同列），可增删订阅、逐条调间隔、看待推送条数与**下次推送倒计时**、按**工作区分组**并显示**相对活跃时间**（刚刚 / N分钟 / N小时 / N天）。
+- **超长自动转图片**：QQ 单条消息约 4000 字符上限，汇聚内容超限时用内嵌 Typst 渲染成图片发送（图片高度有上限，超出会截断并注明）；配置项 `subscriptionSendMode` 可选 `text`（默认）/ `auto` / `image`。
+- **用量双数据源**：优先 `dsh-token-metrics`（含费用、TTFT、输出速度、项目/来源分布、供应商余额、日预算），回退 `@kenz1117/dsh-ui-usage-billing`。
+- **卡片模板统一**：`/usage` `/stats` `/tasks` `/status` `/jobs` 全部走 Typst 卡片（其中 `/tasks` `/status` `/jobs` 此前只有纯 Markdown 排版）。
+- **菜单整合**：技能管理 / MCP 服务 / 统计信息 / 用量计费 / 会话订阅 收进「管理」子菜单，顶层不再被查看类入口占满。
+- **沙箱模式默认开启**：机器人正式上线前请保持开启，并在开放平台「测试人员管理」中加入您的 QQ 号。
+- **修复**：订阅定时推送从不触发（`start()` → `stop()` 把调度器置空）、「立即推送」只推已到期会话、发送失败丢消息、失败重试风暴、渲染输出目录不可写导致图片退化为 Markdown 排版、面板高度写死、左栏图标风格不一致。
+- **此前 0.2.3 能力**：`/stats` 统计卡片、菜单动态预设、`/usage` 范围与热力图、图片说明默认关闭、流式回复开关、CI 自动发布。
 
 ---
 
@@ -335,25 +338,28 @@ pnpm test
 ✔ SessionManager (17 tests passed)
 ✔ QQGatewayClient (6 tests passed)
 ✔ QQ scan-to-bind protocol (11 tests passed)
-✔ ApprovalHandler / multi-question (5 tests passed)
+✔ ApprovalHandler / multi-question (6 tests passed)
 ✔ MessageBridge (33 tests passed)
-✔ subscription intervals / digest / store / scheduler (29 tests passed)
+✔ Config schema (5 tests passed)
+✔ subscription intervals / digest / store / scheduler (30 tests passed)
 ✔ subscription lifecycle / delivery safety (6 tests passed)
 ✔ subscription delivery form / image height budget (10 tests passed)
 ✔ subscription HTTP route (7 tests passed)
 ✔ client sidebar registration contract (6 tests passed)
 ✔ subscription pane layout adapts to the viewport (6 tests passed)
 ✔ relative activity time / workspace grouping (11 tests passed)
+✔ streaming reply option (4 tests passed)
 ✔ Task overview (11 tests passed)
 ✔ Usage billing integration (12 tests passed)
 ✔ dsh-token-metrics integration (11 tests passed)
 ✔ Render engines (33 passed, 1 skipped)
+✔ render output dir / card templates (11 tests passed)
 ✔ Typst engine / markdown conversion (7 tests passed)
 ✔ qq_render_text_image tool (14 tests passed)
 ✔ AdminInventory (27 tests passed)
 ✔ qq_send_file tool (20 tests passed)
-ℹ tests 376
-ℹ pass 375
+ℹ tests 387
+ℹ pass 386
 ℹ skipped 1
 ℹ fail 0
 ```

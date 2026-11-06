@@ -4,7 +4,7 @@ All notable changes to `dsh-adapter-qq` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.2.4] - 2026-11-06
 
 ### Added
 
@@ -74,8 +74,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     for deterministic tests.
 - Tests: 77 new cases (376 total, 375 pass, 1 skipped).
 
-### Added
-
 - **Over-long subscription digests are delivered as an image.** QQ truncates a
   single markdown message beyond ~4000 characters, so a digest that exceeds the
   budget (3800, the same figure the plugin already uses for reply chunking) is
@@ -93,13 +91,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   trimmed on a line boundary with an explicit "已截断，完整 N 条请在 Web UI 查看"
   subtitle; measured 1800x6618 after the cap.
 
-### Removed
-
-- **The self-imposed "5 previews" fold.** It was never a requirement: it dropped
-  messages from the digest and — worse — kept every digest under the character
-  budget, which made the "too long → send an image" rule unreachable. The digest
-  now represents every buffered message; the delivery form is decided by the
-  measured length, and `full` mode only widens the per-message preview.
+- Integration with [`dsh-token-metrics`](https://github.com/hugoyee75-cmyk/dsh-token-metrics)
+  as an alternative `/usage` data source. Detected via the Loader tree or the
+  plugin inventory; when present it is preferred over
+  `@kenz1117/dsh-ui-usage-billing` and the command renders extra sections that
+  only token-metrics can supply: average TTFT, output speed (t/s), per-project
+  and per-origin (main / subagent / workflow) usage, provider balance and
+  subscription quota windows, the daily-budget progress bar, and the list of
+  models that matched no price. Costs are converted from USD with the snapshot's
+  own `cost.fx.usdCny`.
+- Both sources share one code path (`lib/sync/token-metrics.js` normalises the
+  token-metrics snapshot into the existing document shape), so `/usage`, the
+  bottom menu entry and the `/help` line behave identically whichever plugin is
+  installed; with neither installed the reply lists both install commands.
 
 ### Changed
 
@@ -116,10 +120,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   menu entry at all — the feature existed but was unreachable from the menu.
   Friendly-name mapping and `/help` were updated to match.
 
-### Fixed
+### Removed
+
+- **The self-imposed "5 previews" fold.** It was never a requirement: it dropped
+  messages from the digest and — worse — kept every digest under the character
+  budget, which made the "too long → send an image" rule unreachable. The digest
+  now represents every buffered message; the delivery form is decided by the
+  measured length, and `full` mode only widens the per-message preview.
 
 ### Fixed
-
 - **Scheduled subscription pushes never fired.** `MessageBridge#start()` begins
   with `this.stop()`, and `stop()` nulled `subscriptionScheduler`. Every later
   `enqueue()` then called `arm()` on `null`, so no timer was ever armed while the
@@ -138,7 +147,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   window made `arm()` re-fire at 0ms, retrying a permanently failing send at full
   speed (observed: 14 attempts in 40ms). Added per-session exponential backoff
   (30s, 1m, 2m … capped at the subscription's own interval) that `arm()` honours.
-
 - **"立即推送" now actually pushes.** It called `runDue()`, which only flushes
   sessions whose coalescing window had already closed — so for anything buffered
   but not yet due (the normal case) the button did nothing. Added
@@ -147,7 +155,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `推送中…` while running, and the outcome is reported
   (`已立即推送 N 个会话的摘要到 QQ` / `当前没有待推送的消息`). `runDue()` keeps
   honouring the window for scheduled flushes.
-
 - **The subscription pane no longer has a fixed height.** It used
   `height:100%` + `overflow:hidden` on the host container and a hard
   `max-height:190px` on the candidate list, so a short window clipped content the
@@ -155,7 +162,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   (`flex:1 1 auto`, `max-height:100%`, `overflow-y:auto`), the subscription list
   takes the leftover space, and the candidate list uses
   `max-height: clamp(140px, 32vh, 460px)` so it tracks the real screen size.
-
 - The subscription panel is now reachable. The first attempt registered
   `sidebar.right.pane.tab` / `.title`, which is the RIGHT-side pane slot — the
   right pane's own "开始" page is driven by `sidebarRightTabs.register({ guide })`
@@ -166,25 +172,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Subscription lookups no longer assume `SessionManager#getSessionInfoById`
   exists; a defensive `describeSession` falls back to the listing entry.
 - `MessageBridge#stop()` no longer throws when the scheduler stub lacks `stop()`.
-
-### Added
-
-- Integration with [`dsh-token-metrics`](https://github.com/hugoyee75-cmyk/dsh-token-metrics)
-  as an alternative `/usage` data source. Detected via the Loader tree or the
-  plugin inventory; when present it is preferred over
-  `@kenz1117/dsh-ui-usage-billing` and the command renders extra sections that
-  only token-metrics can supply: average TTFT, output speed (t/s), per-project
-  and per-origin (main / subagent / workflow) usage, provider balance and
-  subscription quota windows, the daily-budget progress bar, and the list of
-  models that matched no price. Costs are converted from USD with the snapshot's
-  own `cost.fx.usdCny`.
-- Both sources share one code path (`lib/sync/token-metrics.js` normalises the
-  token-metrics snapshot into the existing document shape), so `/usage`, the
-  bottom menu entry and the `/help` line behave identically whichever plugin is
-  installed; with neither installed the reply lists both install commands.
-
-### Fixed
-
 - Provider identifiers in the site table (`workbuddy`, `deepseek`) are no longer
   masked as hostnames — they are billing routes, not domains, so masking hid the
   only information the column carried.
@@ -195,6 +182,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   default) and would silently under-report.
 - `byDayModelsSite` uses the `{ day: { model: { site: cell } } }` shape the
   aggregator expects; the flattened shape produced a table of `***` rows.
+- **Card pictures silently lost their template.** `ensureOutputDir()` only probed
+  `mkdir`: `%DSH_HOME%\adapter-qq\renders` existed and `mkdir` succeeded, but
+  creating files inside it was denied by the Windows ACL. The renderer therefore
+  picked an unusable directory, Typst wrote nothing, the headless browser is
+  unavailable in this host, Pillow hit the same `EACCES`, and the SVG writer threw
+  `EPERM` — so what reached QQ was a degraded render rather than the card layout.
+  The check now writes and removes a real probe file before accepting a directory,
+  falling back to the temp dir and then to a per-process `mkdtemp`.
+- **`/tasks`, `/status` and `/jobs` never passed `typstBody`.** They handed raw
+  Markdown to the generic renderer, so their pictures could not look like
+  `/usage` or `/stats`. Added `buildScheduleTypst()` and
+  `buildAgentStatusTypst()` / `buildJobsTypst()`, and every card command now sets
+  `expectTypstBody` so an empty body is logged instead of degrading silently. The
+  caption also states which layout was used (卡片模板 / 通用排版).
+- Tests: 387 cases (386 pass, 1 skipped).
 
 ## [0.2.3] - 2026-10-29
 
@@ -391,6 +393,8 @@ Targets **DeepSeek Harness 0.2.1-rc.3** (`engines.dsh: >=0.2.1-rc.3 <0.3.0`).
   keyboards/emoji, session pagination, gateway, approvals/questions, bridge,
   render engines, Typst, inventory and both agent tools.
 
+[0.2.4]: https://github.com/jixishi/dsh-adapter-qq/releases/tag/v0.2.4
+[0.2.3]: https://github.com/jixishi/dsh-adapter-qq/releases/tag/v0.2.3
 [0.2.2]: https://github.com/jixishi/dsh-adapter-qq/releases/tag/v0.2.2
 [0.2.1]: https://github.com/jixishi/dsh-adapter-qq/releases/tag/v0.2.1
 [0.2.0]: https://github.com/jixishi/dsh-adapter-qq/releases/tag/v0.2.0
