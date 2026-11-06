@@ -2,6 +2,12 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+/** Repository root, resolved from this test file so the suite runs on any host. */
+const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+
 /**
  * Layout contract for the subscription pane.
  *
@@ -15,7 +21,7 @@ import fs from 'node:fs';
  * and the real component source instead of measuring pixels.
  */
 
-const SOURCE = fs.readFileSync('W:/dsh-plugins/dsh-adapter-qq/lib/client.js', 'utf8');
+const SOURCE = fs.readFileSync(join(REPO_ROOT, 'lib', 'client.js'), 'utf8');
 const CSS = SOURCE.match(/const subscriptionCss = `([\s\S]*?)`;/)[1];
 
 function ruleOf(selector) {

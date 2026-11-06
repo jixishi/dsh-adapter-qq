@@ -1,6 +1,12 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+/** Repository root, resolved from this test file so the suite runs on any host. */
+const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 import path from 'node:path';
 
 import { buildUsageTypst } from '../lib/sync/usage.js';
@@ -19,8 +25,8 @@ import { buildScheduleTypst } from '../lib/sync/task-card.js';
  *    renderer, so its picture looked nothing like /usage or /stats.
  */
 
-const BRIDGE = fs.readFileSync('W:/dsh-plugins/dsh-adapter-qq/lib/sync/message-bridge.js', 'utf8');
-const RENDER = fs.readFileSync('W:/dsh-plugins/dsh-adapter-qq/lib/render/index.js', 'utf8');
+const BRIDGE = fs.readFileSync(join(REPO_ROOT, 'lib', 'sync', 'message-bridge.js'), 'utf8');
+const RENDER = fs.readFileSync(join(REPO_ROOT, 'lib', 'render', 'index.js'), 'utf8');
 
 describe('render output directory must be proven writable', () => {
   it('probes with a real file write, not just mkdir', () => {

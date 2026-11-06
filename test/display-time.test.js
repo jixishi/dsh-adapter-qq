@@ -2,6 +2,12 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+/** Repository root, resolved from this test file so the suite runs on any host. */
+const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+
 import { formatRelativeTime, groupByWorkspace, workspaceLabel } from '../lib/sync/display-time.js';
 
 const MINUTE = 60 * 1000;
@@ -99,7 +105,7 @@ describe('workspace labelling and grouping', () => {
 
 describe('subscription API payload', () => {
   it('ships relative time and workspace groups to the pane', () => {
-    const source = fs.readFileSync('W:/dsh-plugins/dsh-adapter-qq/lib/qq/subscription-route.js', 'utf8');
+    const source = fs.readFileSync(join(REPO_ROOT, 'lib', 'qq', 'subscription-route.js'), 'utf8');
     // The pane cannot compute these itself (no session store in the browser), so
     // the host must send them.
     assert.match(source, /updatedLabel:\s*formatRelativeTime/);
@@ -108,12 +114,12 @@ describe('subscription API payload', () => {
   });
 
   it('uses an injectable clock so the labels are testable', () => {
-    const source = fs.readFileSync('W:/dsh-plugins/dsh-adapter-qq/lib/qq/subscription-route.js', 'utf8');
+    const source = fs.readFileSync(join(REPO_ROOT, 'lib', 'qq', 'subscription-route.js'), 'utf8');
     assert.match(source, /now = \(\) => Date\.now\(\)/);
   });
 
   it('renders the picker grouped by workspace', () => {
-    const source = fs.readFileSync('W:/dsh-plugins/dsh-adapter-qq/lib/client.js', 'utf8');
+    const source = fs.readFileSync(join(REPO_ROOT, 'lib', 'client.js'), 'utf8');
     assert.match(source, /availableWorkspaceSections/);
     assert.match(source, /dsh-sub-group-head/);
     assert.match(source, /最近活跃时间/);

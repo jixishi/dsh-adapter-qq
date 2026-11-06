@@ -2,6 +2,12 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+/** Repository root, resolved from this test file so the suite runs on any host. */
+const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+
 /**
  * Contract test for the client half.
  *
@@ -14,7 +20,7 @@ import fs from 'node:fs';
  * on the shipped code, not on a reimplementation.
  */
 
-const CLIENT_PATH = 'W:/dsh-plugins/dsh-adapter-qq/lib/client.js';
+const CLIENT_PATH = join(REPO_ROOT, 'lib', 'client.js');
 
 function makeElement(type, props, ...children) {
   return { $$element: true, type, props: props || {}, children: children.flat(Infinity) };
