@@ -18,6 +18,7 @@ import './subscriptions.test.js';
 import './subscription-route.test.js';
 import './update-route.test.js';
 import './cards.test.js';
+import './schedule-notices.test.js';
 import './helpers.test.js';
 import './subscription-layout.test.js';
 import './subscription-lifecycle.test.js';

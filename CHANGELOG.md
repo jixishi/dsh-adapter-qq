@@ -6,12 +6,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [未发布]
 
+### Added
+
+- **定时任务完成通知**（接入订阅管理）。官方 `@deepseek-ai/dsh-schedule` 触发任务时只会往目标会话里投一条提醒，QQ 端看不到执行结果。
+  - 识别 `user/message` 的 `source.kind === 'schedule'`，记录是哪个任务唤醒了该会话；该轮结束时推送「⏰ 任务名 · 已完成」+ 结果摘要。
+  - 结果较长（> 800 字符）时**渲染成图片**发送，避免单条消息 4000 字符上限截断。
+  - 订阅管理面板新增「定时任务通知」区，逐任务开关；开关存 `$DSH_HOME/adapter-qq/schedule-notices.json`，默认开启。
+  - 去重：同一任务同一次投递（按会话 + 秒）只播报一次，recurring 任务的批量投递不会重复通知。
+  - 组合里没装 `dsh-schedule` 时面板显示「未启用官方定时任务」，不报错。
+  - 不做任务增删改：任务管理仍在 DSH「任务」页面。
+
 ### Fixed
 
 - **三个设置项没有 UI 入口**。设置页是手写的字段列表（`updateField("key")` 行），不是按 schema 渲染的表单，因此只加 config 字段不会出现在界面上 —— `busyDelivery`、`notifyTurnAbnormal`、`notifyRestartRecovery` 三个键就处于「能生效但看不见」的状态。已补齐三行，并新增 `test/settings-coverage.test.js` 双向校验 schema 与设置页行：漏行现在是失败测试，而不是静默缺口（`token`、`activeSessionId`、`allowFrom` 作为内部字段排除）。
 - **「插话方式」改为子菜单注册**。原先是一个顶层 `send_message` 项，占掉一个顶层名额（QQ 上限 10）且无法展示可选项。现在与「权限模式」「模型与思考」同构：子菜单下含 立即插话 `/delivery steer`、排队 `/delivery queue`、交互式选择 `/delivery`。
 
-注：这两个改动在 `0.2.4` 发布之后合入 `main`，npm 上的 `0.2.4` 不包含它们（npm 不允许覆盖已发布版本）。
+注：这些改动在 `0.2.4` 发布之后合入 `main`，npm 上的 `0.2.4` 不包含它们（npm 不允许覆盖已发布版本）。
 
 ## [0.2.4] - 2026-11-06
 
