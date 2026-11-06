@@ -53,7 +53,7 @@ describe('settings tab is grouped into titled sections', () => {
     const titles = [...CLIENT.matchAll(/React\.createElement\(Section, \{\s*\n\s*title: "([^"]+)"/g)].map(
       (m) => m[1],
     );
-    assert.deepEqual(titles, ['连接与身份', '会话与工作区', '对话与投递', '图片与渲染', '通知与提醒', '高级']);
+    assert.deepEqual(titles, ['插件更新', '连接与身份', '会话与工作区', '对话与投递', '图片与渲染', '通知与提醒', '高级']);
   });
 
   it('does not leave any row outside a section', () => {

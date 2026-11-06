@@ -16,6 +16,7 @@ import './approval-abstain.test.js';
 import './delivery.test.js';
 import './subscriptions.test.js';
 import './subscription-route.test.js';
+import './update-route.test.js';
 import './subscription-layout.test.js';
 import './subscription-lifecycle.test.js';
 import './subscription-delivery.test.js';

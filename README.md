@@ -1,9 +1,13 @@
 # dsh-adapter-qq
 
+[![npm version](https://img.shields.io/npm/v/dsh-adapter-qq.svg)](https://www.npmjs.com/package/dsh-adapter-qq)
+[![npm downloads](https://img.shields.io/npm/dm/dsh-adapter-qq.svg)](https://www.npmjs.com/package/dsh-adapter-qq)
+[![Publish](https://github.com/jixishi/dsh-adapter-qq/actions/workflows/publish.yml/badge.svg)](https://github.com/jixishi/dsh-adapter-qq/actions/workflows/publish.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%E2%89%A520-brightgreen.svg)](package.json)
+[![DSH](https://img.shields.io/badge/dsh-0.2.1--rc.3%20%7C%200.2.x-blue.svg)](package.json)
 [![Cordis](https://img.shields.io/badge/Cordis-Plugin-blue.svg)](https://github.com/deepseek-ai/deepseek-harness)
 [![QQ Open Platform](https://img.shields.io/badge/QQ%20Open%20Platform-OpenAPI%20v2-green.svg)](https://bot.q.qq.com/wiki/develop/api-v2/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.2.4-blue.svg)](CHANGELOG.md)
 
 `dsh-adapter-qq` 是针对 [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness) 深度定制的 **QQ 官方机器人（C2C 单聊模式）适配器插件**。
 
