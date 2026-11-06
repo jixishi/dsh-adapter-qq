@@ -1,8 +1,30 @@
-import { describe, it } from 'node:test';
+import { describe, it, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { readFileSync, rmSync } from 'node:fs';
 import { MessageBridge, displayWorkspacePath, resolvePermissionLabel, resolvePresetLabel } from '../lib/sync/message-bridge.js';
 import { SubscriptionStore } from '../lib/sync/subscriptions.js';
+
+/**
+ * Fixture workspace for the mocked session.
+ *
+ * It must be a real absolute path: the attachment case exercises the bridge's
+ * actual save path (join(sessionCwd, 'uploads')), and a Windows-style literal
+ * such as F:/dsh-plugin/qq-bot is *relative* on POSIX. That made every Linux
+ * test run create a literal "F:" directory inside the repository root, hidden
+ * from git status because it landed under the ignored uploads/.
+ * A tmpdir()-based path is absolute on every platform, and is removed after
+ * this file's tests.
+ */
+const FIXTURE_ROOT = join(tmpdir(), 'dsh_qq_bridge_' + Date.now());
+const FIXTURE_CWD = join(FIXTURE_ROOT, 'qq-bot');
+const FIXTURE_REMOTE = join(FIXTURE_ROOT, 'remote-workspaces', '1');
+
+after(() => {
+  rmSync(FIXTURE_ROOT, { recursive: true, force: true });
+});
 
 describe('MessageBridge', () => {
   function createTestHarness() {
@@ -15,7 +37,7 @@ describe('MessageBridge', () => {
       },
       list: async () => ({
         items: [
-          { sessionId: 'sess-1', title: '开发需求单', cwd: 'F:/dsh-plugin/qq-bot', agentPreset: 'standard', running: false, updatedAt: 1000 },
+          { sessionId: 'sess-1', title: '开发需求单', cwd: FIXTURE_CWD, agentPreset: 'standard', running: false, updatedAt: 1000 },
         ],
       }),
       cancel: async () => true,
@@ -55,12 +77,12 @@ describe('MessageBridge', () => {
 
     let activeSession = 'sess-1';
     const mockWorkspaces = [
-      { id: 'ws-1', title: 'qq-bot', path: 'F:/dsh-plugin/qq-bot', isRemote: false, sessionIds: ['sess-1', 'sess-2'] },
-      { id: 'ws-remote', title: '免费:~', path: 'C:/Users/lydxh/.dsh/remote-workspaces/1', isRemote: true, sessionIds: [] },
+      { id: 'ws-1', title: 'qq-bot', path: FIXTURE_CWD, isRemote: false, sessionIds: ['sess-1', 'sess-2'] },
+      { id: 'ws-remote', title: '免费:~', path: FIXTURE_REMOTE, isRemote: true, sessionIds: [] },
     ];
 
-    const sessionOne = { sessionId: 'sess-1', title: '开发需求单', cwd: 'F:/dsh-plugin/qq-bot', agentPreset: 'standard', permission: 'workspace-write', running: false, index: 1 };
-    const sessionTwo = { sessionId: 'sess-2', title: '界面重叠分析', cwd: 'F:/dsh-plugin/qq-bot', agentPreset: 'ptc', permission: 'workspace-write', running: true, index: 2 };
+    const sessionOne = { sessionId: 'sess-1', title: '开发需求单', cwd: FIXTURE_CWD, agentPreset: 'standard', permission: 'workspace-write', running: false, index: 1 };
+    const sessionTwo = { sessionId: 'sess-2', title: '界面重叠分析', cwd: FIXTURE_CWD, agentPreset: 'ptc', permission: 'workspace-write', running: true, index: 2 };
     const allMockSessions = [sessionOne, sessionTwo];
     const EMOJIS = ['🍎', '🍊', '🍋', '🍇', '🍉', '🍓'];
 
@@ -98,18 +120,25 @@ describe('MessageBridge', () => {
       },
       findSessionByIndex: async (index) => allMockSessions.find((s) => s.index === index) || null,
       browseDirectory: async (dirPath, page = 1) => ({
-        currentPath: dirPath || 'F:/dsh-plugin',
+        currentPath: dirPath || FIXTURE_ROOT,
         subdirs: ['qq-bot', 'sub-folder'],
         allSubdirsCount: 2,
         page,
         totalPages: 1,
         canGoUp: true,
-        parentPath: 'F:/',
+        parentPath: tmpdir(),
       }),
       createDirectory: async (parent, name) => `${parent}/${name}`,
       getActiveSessionInfo: async () => {
         const found = allMockSessions.find((s) => s.sessionId === activeSession) || sessionOne;
         return { ...found, sessionId: activeSession };
+      },
+      // The bridge resolves a session's cwd through this method when saving QQ
+      // attachments. Without it the save path fell back to process.cwd() — the
+      // repository root — which is exactly the pollution this fixture removes.
+      getSessionInfoById: async (id) => {
+        const found = allMockSessions.find((s) => s.sessionId === id) || sessionOne;
+        return { ...found, sessionId: id };
       },
       getModelCatalog: async () => ({
         current: { provider: 'cpa', model: 'gemini-3.8-flash' },
@@ -257,7 +286,7 @@ describe('MessageBridge', () => {
     assert.ok(last.msg.markdown.includes('开发需求单'));
     // Default path mode is the final folder only
     assert.ok(last.msg.markdown.includes('  └ 路径: `qq-bot`'));
-    assert.ok(!last.msg.markdown.includes('F:/dsh-plugin/qq-bot'));
+    assert.ok(!last.msg.markdown.includes(FIXTURE_CWD));
     // Sessions are one `>` quote block under the workspace (blank line before it)
     assert.ok(last.msg.markdown.includes('\n\n> 1.'));
     assert.ok(last.msg.markdown.includes('> 2.'));
@@ -283,7 +312,7 @@ describe('MessageBridge', () => {
     await new Promise((r) => setTimeout(r, 15));
 
     const markdown = harness.sentMessages[0].msg.markdown;
-    assert.ok(markdown.includes('  └ 路径: `F:/dsh-plugin/qq-bot`'));
+    assert.ok(markdown.includes('  └ 路径: `' + FIXTURE_CWD + '`'));
     harness.bridge.stop();
   });
 
@@ -682,6 +711,12 @@ describe('MessageBridge', () => {
       assert.ok(imgPart);
       assert.equal(imgPart.mediaType, 'image/png');
       assert.equal(imgPart.data, Buffer.from('FAKE_PNG_BYTES').toString('base64'));
+
+      // Both attachments were written under the session cwd's uploads/, i.e. the
+      // fixture's absolute path — never a relative Windows-style literal.
+      const uploads = join(FIXTURE_CWD, 'uploads');
+      assert.equal(readFileSync(join(uploads, 'test.png'), 'utf8'), 'FAKE_PNG_BYTES');
+      assert.equal(readFileSync(join(uploads, 'readme.txt'), 'utf8'), 'Hello from QQ text file!');
     } finally {
       globalThis.fetch = originalFetch;
       harness.bridge.stop();

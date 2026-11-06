@@ -4,6 +4,39 @@ All notable changes to `dsh-adapter-qq` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **轮次异常结束会告诉你**（Issue #8）。以前一轮对话因报错、达到输出上限、被策略拦截或中断而结束时，QQ 端只会看到「正在输入」消失，没有任何回执，分不清还在跑还是早已死掉。
+  - 新增 `turn/start` 跟踪：记录本轮开始时间、最后调用的工具（在 `syncToolCalls` 开关**之前**记录，所以关掉工具同步也照样能报「刚才停在哪个工具」）、以及本轮是否产出过内容。
+  - `turn/end` 读取 `reason.kind` 后推送状态提示 + 操作板（查看状态 / 会话列表）。
+  - `reason.kind` 取值**以 DSH 源码为准**（`turnEndToStopReason`）：`completed` / `max-tokens` / `aborted` / `interrupted` / `blocked` / `error`。issue 里提到的 `max-steps`、`step-limit` 并不存在，未按其实现；该类型被注释为 merge-extensible，因此对未知 kind 用 `default` 兜底播报而不是丢弃。
+  - 错误摘要按 `error → failure → message → text → reason` 逐级回落（DSH 实际会出现这五种字段，不能假定一定有 `error`）。
+  - 不打扰的两种情形：`completed` 不播报；用户自己按 `/cancel` 触发的 `aborted` 不播报（`/cancel` 已有回执）。底层会自动重试的瞬态错误码（`STREAM_CLOSED` 等）也保持安静 —— 位于 `reason.error.code` 而非 `kind`。
+  - 新设置 `notifyTurnAbnormal`（默认开启）。
+- **插话方式可选**（PR #4）。运行中直接发普通文本，以前固定 `steer`，现在可以选：
+  - 新设置 `busyDelivery`：`steer`（立即插话，默认）/ `queue`（本轮结束后发送）。
+  - `/delivery`（`/投递`）展示当前选择并带切换按钮；`/steer <文本>` / `/queue <文本>` 可单次覆盖。
+  - 空闲时一律走 `queue`（插话只在运行中的轮次里存在，`queue` 就是开下一轮）。
+  - 只在**需要你知道或操作**时才回执：排队 → `📥 已排队（第 N 条）` 带插话/移除按钮；请求插话但本轮刚好结束 → 提示已转为排队；空闲时显式 `/steer` → 说明已按普通消息发送。按默认插话成功、以及空闲时的普通消息都不多出消息。
+  - `/queue`（无参数）列出排队中的消息并给出 `/qsteer`、`/qdrop` 操作；`/qsteer <ID>` 改为插话、`/qdrop <ID>` 移除。
+- **会话卡显示最后一条用户消息**（PR #5）。`/sessions`、切换会话卡、`/current` 新增一行：
+  - 来自实时事件流 → 标注「最后一条用户消息」（含中途 steer）；
+  - 来自 `turnOutline` 投影或持久化投影缓存 → 标注「最近一轮提问」（投影只保存每轮第一句，所以措辞不同）。
+  - 单行化处理：去换行、去反引号（否则一个反引号会吞掉卡片后半段）、超过 80 字截断；会话卡内存上限 200 条。
+- QQ 底部菜单新增「插话方式」入口（PR #6），点一下就是 `/delivery`，不必手打。
+
+### Fixed
+
+- **Web UI 没接手审批时，不再被当成「已拒绝」**（PR #2）。`approval/request` 的 waterfall 返回 `unavailable` 只表示「Web UI 没有接这个请求」，旧实现把它和 QQ 的决定放进同一个 race，于是它立刻赢下：Agent 直接 fail closed、QQ 卡片上的按钮变成点不动的死按钮，还发出假通知「ℹ️ 【审批同步】已在 DSH Web UI 中完成处理: ❌ 已拒绝」。
+  - 现在只有真实决定（`allowed-once` / `rejected`）才算数；`unavailable`、越界返回值、下行 reject 统一视为「Web UI 没决定」，继续等 QQ 点击。
+  - 仅在**卡片确实送达**且 **caller 的 signal 仍能兜住等待**时才挂起，否则保持原来的快速失败，避免请求卡死。
+  - 同步通知只在真实决定时发送，不再替 Web UI 说话。
+  - 补上「进入监听器时 signal 已 aborted」的情形：abort 监听器对已 aborted 的 signal 不会再触发，原来会让这个 race 永久挂住。
+- **测试 fixture 的 cwd 改成可移植路径**（PR #3）。`test/message-bridge.test.js` 把会话 cwd 写死为 `F:/dsh-plugin/qq-bot`：Windows 上是绝对路径，POSIX 上是**相对**路径，而附件用例会走真实的 `join(sessionCwd, 'uploads')` 落盘，于是 Linux/macOS 每次跑测试都在仓库根目录造一个字面量 `F:` 目录 —— 因为落在已忽略的 `uploads/` 里，`git status` 还看不见。
+  - 改为 `tmpdir()` 下的 fixture，并在测试结束后删除；顺带补上 `getSessionInfoById` 桩（缺它时附件路径会回退到 `process.cwd()`），并新增断言确认两个附件确实落在 fixture 的 `uploads/` 下。
+
 ## [0.2.4] - 2026-11-06
 
 ### Added
