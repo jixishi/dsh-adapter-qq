@@ -285,7 +285,7 @@ describe('subscription pane task section', () => {
   it('always renders the task section', () => {
     assert.match(CLIENT, /const taskNode = React\.createElement\(/, 'rendered unconditionally');
     assert.doesNotMatch(CLIENT, /const taskNode =\s*\n\s*state\.tasks\.length > 0/, 'no early null');
-    assert.match(CLIENT, /listNode,\s*\n\s*taskNode,/, 'rendered after the subscription list');
+    assert.match(CLIENT, /taskNode\s*\n\s*\);/, 'rendered inside the task tab pane');
   });
 
   it('explains all three states', () => {
@@ -297,5 +297,38 @@ describe('subscription pane task section', () => {
   it('fetches the task list from the subscription route', () => {
     assert.match(CLIENT, /postSubscriptions\("tasks"\)/);
     assert.match(CLIENT, /postSubscriptions\("toggleTask"/);
+  });
+});
+
+describe('subscription pane tabs', () => {
+  // Both features share one panel, so they are separated by tabs rather than
+  // stacked — a task list under a subscription list read as one tangled page.
+  const CLIENT = fs.readFileSync(
+    new URL('../lib/client.js', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'),
+    'utf8'
+  );
+
+  it('declares two tabs', () => {
+    assert.match(CLIENT, /className: "dsh-sub-tabs", role: "tablist"/);
+    assert.match(CLIENT, /`会话订阅\$\{/, 'the subscription tab shows its count');
+    assert.match(CLIENT, /`定时任务\$\{/, 'the task tab shows its count');
+  });
+
+  it('switches the visible pane', () => {
+    assert.match(CLIENT, /state\.tab === "tasks" \? tasksView : subscriptionsView/);
+    assert.match(CLIENT, /patch\(\{ tab: "tasks" \}\)/);
+    assert.match(CLIENT, /patch\(\{ tab: "subscriptions" \}\)/);
+  });
+
+  it('styles the active tab', () => {
+    assert.match(CLIENT, /\.dsh-sub-tab-active \{/);
+    assert.match(CLIENT, /dsh-sub-tab\$\{state\.tab === "tasks" \? " dsh-sub-tab-active" : ""\}/);
+  });
+
+  it('keeps the task section out of the subscription view', () => {
+    // subscriptionsView lists exactly the subscription nodes.
+    const view = /const subscriptionsView = \[([\s\S]*?)\];/.exec(CLIENT);
+    assert.ok(view, 'subscriptionsView exists');
+    assert.doesNotMatch(view[1], /taskNode/, 'the task list is not stacked under subscriptions');
   });
 });
