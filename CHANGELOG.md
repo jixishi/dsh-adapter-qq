@@ -4,6 +4,15 @@ All notable changes to `dsh-adapter-qq` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [未发布]
+
+### Fixed
+
+- **三个设置项没有 UI 入口**。设置页是手写的字段列表（`updateField("key")` 行），不是按 schema 渲染的表单，因此只加 config 字段不会出现在界面上 —— `busyDelivery`、`notifyTurnAbnormal`、`notifyRestartRecovery` 三个键就处于「能生效但看不见」的状态。已补齐三行，并新增 `test/settings-coverage.test.js` 双向校验 schema 与设置页行：漏行现在是失败测试，而不是静默缺口（`token`、`activeSessionId`、`allowFrom` 作为内部字段排除）。
+- **「插话方式」改为子菜单注册**。原先是一个顶层 `send_message` 项，占掉一个顶层名额（QQ 上限 10）且无法展示可选项。现在与「权限模式」「模型与思考」同构：子菜单下含 立即插话 `/delivery steer`、排队 `/delivery queue`、交互式选择 `/delivery`。
+
+注：这两个改动在 `0.2.4` 发布之后合入 `main`，npm 上的 `0.2.4` 不包含它们（npm 不允许覆盖已发布版本）。
+
 ## [0.2.4] - 2026-11-06
 
 ### Added
