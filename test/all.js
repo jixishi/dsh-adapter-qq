@@ -1,5 +1,6 @@
 import './client.test.js';
 import './client-sidebar.test.js';
+import './client-registration.test.js';
 import './config.test.js';
 import './settings-coverage.test.js';
 import './media.test.js';
