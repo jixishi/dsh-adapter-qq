@@ -236,6 +236,52 @@ describe('MessageBridge schedule notifications', () => {
     assert.match(sent[0].markdown, /备份完成，共 12 个文件/);
   });
 
+  it('does not label a turn that was already running when the reminder arrived', async () => {
+    const { bridge, sent } = harness();
+    // A manual turn is in flight; the reminder is queued behind it.
+    bridge.onDshTurnStart('sess-1', { data: { turn: 'manual-turn' } });
+    bridge.turnState.get('sess-1').startedAt = Date.now() - 5000;
+    bridge.turnState.get('sess-1').lastText = '这是手动提问的回答';
+    bridge.noteScheduleRun('sess-1', scheduleEvent());
+
+    await bridge.onDshTurnEnd('u1', 'sess-1', { data: { turn: 'manual-turn', reason: { kind: 'completed' } } });
+    await new Promise((r) => setTimeout(r, 5));
+
+    assert.equal(sent.length, 0, 'the queued delivery must not borrow another turn');
+    assert.ok(bridge.scheduleRuns.get('sess-1'), 'the run waits for the turn it starts');
+    bridge.scheduleRuns.clear();
+  });
+
+  it('reports the run once its own turn ends', async () => {
+    const { bridge, sent } = harness();
+    bridge.noteScheduleRun('sess-1', scheduleEvent());
+    const run = bridge.scheduleRuns.get('sess-1');
+    run.taskId = 't1';
+    run.title = '每日备份';
+
+    bridge.onDshTurnStart('sess-1', { data: { turn: 'schedule-turn' } });
+    assert.equal(run.turn, 'schedule-turn', 'the delivery binds to the turn it starts');
+    bridge.turnState.get('sess-1').lastText = '备份完成，共 12 个文件';
+
+    await bridge.onDshTurnEnd('u1', 'sess-1', { data: { turn: 'schedule-turn', reason: { kind: 'completed' } } });
+    await new Promise((r) => setTimeout(r, 5));
+
+    assert.equal(sent.length, 1);
+    assert.match(sent[0].markdown, /每日备份/);
+    assert.match(sent[0].markdown, /备份完成，共 12 个文件/);
+    assert.equal(bridge.scheduleRuns.size, 0, 'the run is consumed once');
+  });
+
+  it('drops a delivery that never got its own turn', async () => {
+    const { bridge } = harness();
+    bridge.noteScheduleRun('sess-1', scheduleEvent());
+    const run = bridge.scheduleRuns.get('sess-1');
+    run.at = Date.now() - 31 * 60 * 1000;
+
+    bridge.onDshTurnStart('sess-1', { data: { turn: 'later-turn' } });
+    assert.equal(bridge.scheduleRuns.size, 0, 'a stale delivery is discarded, not rebound');
+  });
+
   it('sends a long result as an image', async () => {
     const { bridge, sent, imageCalls } = harness();
     const long = 'x'.repeat(1200);
