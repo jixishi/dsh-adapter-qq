@@ -24,6 +24,15 @@ describe('QQ adapter Config schema', () => {
     assert.equal(Config({}).sessionPathDisplay.get(), 'tail');
   });
 
+  it('enables sandbox mode by default, and still allows turning it off', () => {
+    // Before the bot is published it can only reach testers, so sandbox must be
+    // the out-of-the-box state or the first connection silently fails.
+    assert.equal(DEFAULT_CONFIG.sandbox, true);
+    assert.equal(Config({}).sandbox.get(), true);
+    // An explicit choice — or an existing profile that saved false — still wins.
+    assert.equal(Config({ sandbox: false }).sandbox.get(), false);
+  });
+
   it('unwraps live volatile refs into plain values', () => {
     const plain = unwrapVolatileConfig({
       appId: { get: () => '102882069' },

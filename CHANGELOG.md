@@ -72,7 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     `lib/sync/display-time.js`; the route attaches `updatedLabel`, `workspace`
     and `workspaceGroups` to the list payload, and accepts an injectable `now()`
     for deterministic tests.
-- Tests: 76 new cases (375 total, 374 pass, 1 skipped).
+- Tests: 77 new cases (376 total, 375 pass, 1 skipped).
 
 ### Added
 
@@ -102,6 +102,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   measured length, and `full` mode only widens the per-message preview.
 
 ### Changed
+
+- **Sandbox mode is now on by default** (`sandbox: true`). A bot that has not gone
+  live can only reach testers, so the old default (`false`) made a fresh install
+  fail to connect with nothing obvious to blame. The setting still accepts an
+  explicit `false`, so existing profiles that saved it keep their choice, and the
+  setup docs now say to keep it on until the bot is published (the operator's QQ
+  number must be in 开放平台 → 测试人员管理).
 
 - **The bottom menu groups its "look at something" entries under 管理**:
   技能管理 / MCP 服务 / 统计信息 / 用量计费（装了计费插件时）/ 会话订阅.

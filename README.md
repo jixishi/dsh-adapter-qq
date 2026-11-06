@@ -167,7 +167,7 @@ QQ 开放平台 (q.qq.com)
 2. 在 **开发设置** 中获取：
    - `AppID`（机器人应用 ID）
    - `AppSecret`（开发者密钥）
-3. 机器人调试：若机器人尚未公开发布上线，建议开启**沙箱环境** (`sandbox: true`) 进行测试。
+3. 机器人调试：**沙箱环境默认已开启** (`sandbox: true`)。机器人正式上线前请保持开启，并在开放平台「测试人员管理」中加入您的 QQ 号；正式发布后再关闭。
 
 ## 🚀 安装与部署
 
@@ -205,7 +205,7 @@ dsh plugin --profile web add github:jixishi/dsh-adapter-qq
 | `enabled` | 是否启用 QQ Bot 适配器 | `true` |
 | `appId` | 填写 QQ 开放平台的 Bot AppID | `""` |
 | `clientSecret` | 填写 QQ 开放平台的 AppSecret（密文遮罩） | `""` |
-| `sandbox` | 是否连接沙箱开发环境（测试期间推荐勾选） | `false` |
+| `sandbox` | 是否连接沙箱开发环境（**默认开启**；机器人正式上线前请保持开启，并需在开放平台「测试人员管理」中加入您的 QQ 号） | `true` |
 | `userOpenid` | 绑定的专属用户 OpenID（**留空将在收到首条消息时自动绑定**） | `""` |
 | `defaultPreset` | 新建会话默认 Agent 预设 | `"standard"` |
 | `defaultCwd` | 新建会话默认工作目录（留空使用当前 DSH 工作区） | `""` |
@@ -352,8 +352,8 @@ pnpm test
 ✔ qq_render_text_image tool (14 tests passed)
 ✔ AdminInventory (27 tests passed)
 ✔ qq_send_file tool (20 tests passed)
-ℹ tests 375
-ℹ pass 374
+ℹ tests 376
+ℹ pass 375
 ℹ skipped 1
 ℹ fail 0
 ```
