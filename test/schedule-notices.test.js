@@ -332,3 +332,32 @@ describe('subscription pane tabs', () => {
     assert.doesNotMatch(view[1], /taskNode/, 'the task list is not stacked under subscriptions');
   });
 });
+
+describe('pane chrome survives the tab split', () => {
+  // The tab rewrite once dropped the action row, leaving a panel with no way to
+  // refresh, add or push. Pin every node of the original tree.
+  const CLIENT = fs.readFileSync(
+    new URL('../lib/client.js', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'),
+    'utf8'
+  );
+  const view = /const subscriptionsView = \[([\s\S]*?)\];/.exec(CLIENT);
+
+  it('keeps the action row in the subscription view', () => {
+    assert.ok(view, 'subscriptionsView exists');
+    for (const node of ['actions', 'errorNode', 'noticeNode', 'listNode', 'addNode', 'hint']) {
+      assert.match(view[1], new RegExp(`\\b${node},`), `${node} must stay in the view`);
+    }
+  });
+
+  it('keeps all three actions', () => {
+    assert.match(CLIENT, /state\.loading \? "刷新中…" : "刷新"/);
+    assert.match(CLIENT, /state\.showAdd \? "收起新增" : "新增订阅"/);
+    assert.match(CLIENT, /state\.busy === "flush" \? "推送中…" : "立即推送"/);
+  });
+
+  it('gives the task tab its own refresh', () => {
+    const pane = /const tasksView = React\.createElement\(([\s\S]*?)\n      \);/.exec(CLIENT);
+    assert.ok(pane, 'tasksView exists');
+    assert.match(pane[1], /"刷新"/, 'the task tab can be refreshed');
+  });
+});
