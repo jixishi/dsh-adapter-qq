@@ -92,3 +92,30 @@ describe('settings tab is grouped into titled sections', () => {
     assert.equal(sectionOf('renderWidth'), '图片与渲染');
   });
 });
+
+describe('sections are bordered cards', () => {
+  it('draws each section as a card', () => {
+    const rule = /\.dsh-qq-section \{([\s\S]*?)\}/.exec(CLIENT);
+    assert.ok(rule, '.dsh-qq-section rule exists');
+    const body = rule[1];
+    assert.match(body, /border: 1px solid/, 'the card has a visible border');
+    assert.match(body, /border-radius:\s*\d+px/, 'the card is rounded');
+    assert.match(body, /padding:\s*\d+px/, 'content is inset from the border');
+  });
+
+  it('does not also draw a divider under the title', () => {
+    // The card border already separates sections; a second rule inside the card
+    // would double up.
+    const rule = /\.dsh-qq-section-head \{([\s\S]*?)\}/.exec(CLIENT);
+    assert.ok(rule, '.dsh-qq-section-head rule exists');
+    assert.doesNotMatch(rule[1], /border-bottom/);
+  });
+
+  it('keeps the section title as the card headline', () => {
+    const rule = /\.dsh-qq-section-title \{([\s\S]*?)\}/.exec(CLIENT);
+    assert.ok(rule);
+    const size = /font-size:\s*(\d+)px/.exec(rule[1]);
+    assert.ok(size && Number(size[1]) >= 14, `title should read as a headline, got ${size && size[1]}px`);
+    assert.match(rule[1], /font-weight:\s*600/);
+  });
+});
