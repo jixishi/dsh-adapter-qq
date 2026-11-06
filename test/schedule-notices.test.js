@@ -272,3 +272,30 @@ describe('MessageBridge schedule notifications', () => {
     assert.equal(await bridge.notifyScheduleRun('u1', 's', { taskId: 't', at: 1 }, {}, 'completed'), false);
   });
 });
+
+describe('subscription pane task section', () => {
+  // The section used to disappear when there were no tasks, which is
+  // indistinguishable from "the feature is missing" — it must always render and
+  // explain itself.
+  const CLIENT = fs.readFileSync(
+    new URL('../lib/client.js', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'),
+    'utf8'
+  );
+
+  it('always renders the task section', () => {
+    assert.match(CLIENT, /const taskNode = React\.createElement\(/, 'rendered unconditionally');
+    assert.doesNotMatch(CLIENT, /const taskNode =\s*\n\s*state\.tasks\.length > 0/, 'no early null');
+    assert.match(CLIENT, /listNode,\s*\n\s*taskNode,/, 'rendered after the subscription list');
+  });
+
+  it('explains all three states', () => {
+    assert.match(CLIENT, /当前没有定时任务/);
+    assert.match(CLIENT, /未启用官方定时任务/);
+    assert.match(CLIENT, /读取定时任务失败/);
+  });
+
+  it('fetches the task list from the subscription route', () => {
+    assert.match(CLIENT, /postSubscriptions\("tasks"\)/);
+    assert.match(CLIENT, /postSubscriptions\("toggleTask"/);
+  });
+});
