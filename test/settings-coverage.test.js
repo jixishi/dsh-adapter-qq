@@ -47,3 +47,48 @@ describe('settings tab covers every editable config key', () => {
     }
   });
 });
+
+describe('settings tab is grouped into titled sections', () => {
+  it('declares the expected sections in reading order', () => {
+    const titles = [...CLIENT.matchAll(/React\.createElement\(Section, \{\s*\n\s*title: "([^"]+)"/g)].map(
+      (m) => m[1],
+    );
+    assert.deepEqual(titles, ['连接与身份', '会话与工作区', '对话与投递', '图片与渲染', '通知与提醒', '高级']);
+  });
+
+  it('does not leave any row outside a section', () => {
+    // A row appended before the first Section or after the footer would render
+    // without a heading — the flat list this grouping replaced.
+    const firstSection = CLIENT.indexOf('React.createElement(Section, {');
+    const footer = CLIENT.indexOf('className: "dsh-qq-footer"');
+    assert.ok(firstSection > 0 && footer > firstSection, 'anchors found');
+
+    const head = CLIENT.slice(CLIENT.indexOf('const body = React.createElement('), firstSection);
+    const tail = CLIENT.slice(CLIENT.lastIndexOf(']),'));
+    assert.deepEqual([...head.matchAll(/updateField\("([A-Za-z]+)"/g)].map((m) => m[1]), []);
+    assert.deepEqual(
+      [...tail.matchAll(/updateField\("([A-Za-z]+)"/g)].map((m) => m[1]),
+      [],
+      'nothing may be appended after the last section',
+    );
+  });
+
+  it('keeps the related rows together', () => {
+    const sectionOf = (key) => {
+      const idx = CLIENT.indexOf(`updateField("${key}"`);
+      if (idx < 0) return null;
+      const before = CLIENT.slice(0, idx);
+      const sections = [...before.matchAll(/title: "([^"]+)",/g)];
+      return sections.length ? sections[sections.length - 1][1] : null;
+    };
+    // Delivery belongs with the conversation options, not with rendering.
+    assert.equal(sectionOf('busyDelivery'), '对话与投递');
+    // The three notification switches belong together.
+    assert.equal(sectionOf('notifyTurnAbnormal'), '通知与提醒');
+    assert.equal(sectionOf('notifyRestartRecovery'), '通知与提醒');
+    assert.equal(sectionOf('subscriptionSendMode'), '通知与提醒');
+    // Rendering knobs share one section.
+    assert.equal(sectionOf('renderTheme'), '图片与渲染');
+    assert.equal(sectionOf('renderWidth'), '图片与渲染');
+  });
+});
