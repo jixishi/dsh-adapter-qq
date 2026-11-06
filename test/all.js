@@ -19,6 +19,7 @@ import './stream-reply.test.js';
 import './task-overview.test.js';
 import './usage.test.js';
 import './token-metrics.test.js';
+import './render-template.test.js';
 import './render.test.js';
 import './typst.test.js';
 import './tool-render-image.test.js';
