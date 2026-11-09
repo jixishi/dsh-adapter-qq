@@ -2,7 +2,6 @@
 
 [![npm version](https://img.shields.io/npm/v/dsh-adapter-qq.svg)](https://www.npmjs.com/package/dsh-adapter-qq)
 [![npm downloads](https://img.shields.io/npm/dm/dsh-adapter-qq.svg)](https://www.npmjs.com/package/dsh-adapter-qq)
-[![Publish](https://github.com/jixishi/dsh-adapter-qq/actions/workflows/publish.yml/badge.svg)](https://github.com/jixishi/dsh-adapter-qq/actions/workflows/publish.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A520-brightgreen.svg)](package.json)
 [![DSH](https://img.shields.io/badge/dsh-0.2.1--rc.3%20%7C%200.2.x-blue.svg)](package.json)
@@ -13,12 +12,12 @@
 
 通过本插件，你可以在手机或桌面 QQ 聊天窗口中直接与 DSH Agent 进行完整对话，享受 DSH 的全量编码与执行能力（文件读写、Shell 执行、代码运行、子代理、多步规划、工作流），并实现与 **DSH Web UI 实时双向同屏联动**。
 
-> **当前插件版本：0.2.4**。本次更新：新增 **会话订阅**（非活跃会话后台新消息按间隔汇聚推送，支持通知内定向快速回复、左侧导航栏「订阅管理」面板、按工作区分组与相对活跃时间）；`/usage` **超长内容自动转图片**（`subscriptionSendMode`，默认文字优先）并支持 **`dsh-token-metrics` 双数据源**；五个卡片命令（`/usage` `/stats` `/tasks` `/status` `/jobs`）统一为 Typst 卡片模板；**沙箱模式默认开启**；修复订阅定时推送不触发、「立即推送」无效、渲染输出目录不可写导致图片丢失模板等问题。详见 [CHANGELOG.md](./CHANGELOG.md)。
+> **npm 当前版本：0.2.4**（`package.json`）。仓库 `main` 还包含 0.2.4 之后的一批未发布改动：定时任务完成通知、订阅管理双 Tab、设置页改版与「检查更新」、`/switch` 崩溃修复等，详见 [CHANGELOG.md](./CHANGELOG.md) 的「未发布」段。
 >
-> **兼容性**：面向 **DSH 0.2.1-rc.3**（`engines.dsh: >=0.2.1-rc.3 <0.3.0`），Node.js ≥ 20。
+> **兼容性**：`engines.dsh: >=0.2.1-rc.3 <0.3.0`，`engines.node: >=20`。
 > 已适配 DSH 0.2.1 的 `SessionPromptRequest.mode`（`queue`/`steer`）、`ApprovalRequestEvent.agent`、`permissionPresets.catalog()`、`skills` 服务与 `sessionTitle`/`sessionQuery` 标题读取；旧版本 DSH 不再保证兼容。
 
-## 🆕 0.2.4 更新摘要
+## 📌 0.2.4 发布内容（回顾）
 
 - **会话订阅（新）**：`/subscribe <会话> [分钟]` 订阅**非活跃**会话；后台新消息先累积，到间隔（1/5/15/30/60 分钟，默认 5）合并成**一条摘要**推送。连续消息不会推迟截止时间，空窗口不推送。
 - **通知内快速回复**：摘要附「查看 / 快速回复 / 取消订阅 / 订阅列表」按钮；`/reply <会话> [内容]` 可直接定向发送；在 QQ 引用通知消息回复也会路由回该会话，**不切换当前活跃会话**。
@@ -29,12 +28,12 @@
 - **菜单整合**：技能管理 / MCP 服务 / 统计信息 / 用量计费 / 会话订阅 收进「管理」子菜单，顶层不再被查看类入口占满。
 - **沙箱模式默认开启**：机器人正式上线前请保持开启，并在开放平台「测试人员管理」中加入您的 QQ 号。
 - **修复**：订阅定时推送从不触发（`start()` → `stop()` 把调度器置空）、「立即推送」只推已到期会话、发送失败丢消息、失败重试风暴、渲染输出目录不可写导致图片退化为 Markdown 排版、面板高度写死、左栏图标风格不一致。
-- **轮次异常结束播报**：一轮因报错/超限/被拦截/中断结束时，QQ 会收到状态提示（含停在哪一步工具、错误摘要）+ 操作板；用户自己 `/cancel` 的那次不会重复播报。设置项 `notifyTurnAbnormal` 默认开启。
+- **轮次异常结束播报**：一轮因报错/超限/被拦截/中断结束时，QQ 会收到状态提示（含停在哪一步工具、错误摘要）；用户自己 `/cancel` 的那次不会重复播报。设置项 `notifyTurnAbnormal` 默认开启。
 - **宿主重启恢复**：轮次在重启/崩溃/HMR 时被中断的话，启动并连上 QQ 后可补发一条中断提示（默认**关闭**，设置项 `notifyRestartRecovery`；账本始终记录，打开即生效）。
 - **插话方式可选**：`busyDelivery` 决定运行中发普通文本是「立即插话」还是「排队等本轮结束」，`/delivery` 可切换，`/steer`、`/queue` 单次覆盖，底部菜单也有「插话方式」入口。
 - **会话卡显示最后一条用户消息**：`/sessions`、`/current` 与切换会话卡会带上「最后一条用户消息」或「最近一轮提问」。
 - **审批不再被 Web UI 的「未接手」误判**：`unavailable` 不再当作「已拒绝」，QQ 卡片保持有效，也不再发假同步通知。
-- **此前 0.2.3 能力**：`/stats` 统计卡片、菜单动态预设、`/usage` 范围与热力图、图片说明默认关闭、流式回复开关、CI 自动发布。
+- **此前 0.2.3 能力**：`/stats` 统计卡片、菜单动态预设、`/usage` 范围与热力图、图片说明默认关闭、流式回复开关。
 
 ---
 
@@ -73,8 +72,10 @@
   - **通知带操作按钮**：每条摘要附带「📖 查看 / 💬 快速回复 / 🛑 取消订阅 / 📋 订阅列表」。
   - **快速回复不切会话**：点「快速回复」或发 `/reply <会话> <内容>`，消息直接投递到目标会话；`/reply <会话>` 进入一次性定向态，**只对下一条消息生效**，当前活跃会话保持不变。
   - **引用即回复**：直接对订阅通知消息使用 QQ 的「回复」发送内容，会自动路由回该会话（按通知消息 ID 反查，最多保留最近 200 条）。
-  - **左侧导航栏入口**：插件在**左侧导航栏**（与 Logcat / 插件 / 远程工作区 同一排）注册「🔔 订阅管理」入口。注册按 DSH 的配对规则：`sidebar.panellist`（`id` / `order` / `label` + 图标）与 `main`（`key` **必须等于**上面的 `id`）成对注册；只注册一侧会导致插件能加载、点入口却没内容。点开后可查看订阅列表、待推送条数、一键取消、点选新增、逐条调整汇聚间隔，并支持「立即推送」把缓冲立刻合并发出。
+  - **左侧导航栏入口**：插件在**左侧导航栏**（与 Logcat / 插件 / 远程工作区 同一排）注册「🔔 订阅管理」入口。注册按 DSH 的配对规则：`sidebar.panellist`（`id` / `order` / `label` + 图标）与 `main`（`key` **必须等于**上面的 `id`）成对注册；只注册一侧会导致插件能加载、点入口却没内容。面板用**两个 Tab** 区分功能：「会话订阅」负责增删订阅、待推送条数、逐条调整汇聚间隔与「立即推送」；「定时任务」列出官方定时任务并逐任务开关通知。
   - **持久化**：订阅写在 `$DSH_HOME/adapter-qq/subscriptions.json`（临时文件 + rename 原子替换）；文件损坏时降级为空订阅而不是让插件启动失败。
+- ⏰ **定时任务完成通知**：官方 `@deepseek-ai/dsh-schedule` 触发的任务执行完后，QQ 会收到「⏰ 任务名 · 已完成」+ 结果摘要；超过 800 字符的长结果自动渲染成图片。逐任务开关在订阅管理的「定时任务」Tab，默认开启；开关持久化到 `$DSH_HOME/adapter-qq/schedule-notices.json`。会话忙时提醒会排队，等它自己的轮次结束才播报，不会拿别的轮次的结果顶替。任务本身的增删改仍在 DSH「任务」页面，插件不做。
+- 🔄 **插件更新检查**：设置页「插件更新」区显示当前版本与 npm 最新版本（宿主路由 `/dsh-adapter-qq/update-check`，带 10 分钟缓存），只对比版本号，不会自动下载或安装。
 - 💰 **用量计费联动（可选，两个数据源任选其一）**：
   - **优先 `dsh-token-metrics`**（[hugoyee75-cmyk/dsh-token-metrics](https://github.com/hugoyee75-cmyk/dsh-token-metrics)）：读取本机 `/api/dsh-token-metrics/summary`，除费用/调用/Token/缓存与 30 天热力图外，额外渲染**平均首字延迟（TTFT）**、**输出速度（t/s）**、**项目分布**、**来源分布（主会话/子代理/workflow）**、**供应商余额与订阅配额**、**日预算进度**，以及「未匹配到价格」的模型清单；金额按快照里的 `cost.fx.usdCny` 从美元换算。
   - **回退 `@kenz1117/dsh-ui-usage-billing`**：读取 `/api/billing/usage-stats`、`/pricing` 与 `/relay-quotas`，模型名取计费目录显示名，站点名取中转登记名称，未知域名脱敏。
@@ -99,12 +100,12 @@
   - 扫码确认后自动填入 **AppID / AppSecret / 绑定用户 OpenID** 并保存；`bot_encrypt_secret` 用本地生成的 AES-256-GCM 密钥加密回传，仅本机解密，密钥不出进程。
   - 所有失败都返回结构化错误（`code` / `message` / `retcode` / `detail`）并显示在设置页，便于定位 q.qq.com 拒绝原因或网络问题。
 - 📑 **全局自定义快捷菜单（PUT /v2/menu）**：
-  - 启动后自动通过官方 [`PUT /v2/menu`](https://bot.q.qq.com/wiki/develop/api-v2/autogen/api/v2_menu.put.html) 接口向 QQ 开放平台注册底部快捷菜单，单聊底部直达会话列表、技能、MCP、当前状态与快捷管理。
+  - 启动后自动通过官方 [`PUT /v2/menu`](https://bot.q.qq.com/wiki/develop/api-v2/autogen/api/v2_menu.put.html) 注册底部快捷菜单，按当前环境动态生成：会话列表 / 当前会话 / 模型与思考 / 权限模式 / 插话方式 / 管理（技能、MCP、统计、用量、订阅）/ 任务与状态 / 快捷操作；未安装的能力（用量计费、官方定时任务、持久终端等）对应入口自动省略。
 - 🧩 **动态预设与权限管理**：
-  - 预设列表从 DSH 运行时**动态获取**（内置 + 用户自定义预设），绝不硬编码。
+  - 预设列表从宿主 `agentPresets.list()` **动态获取**（内置 + 用户自定义预设），绝不硬编码。宿主只给 `id` 时回落到可读名称（标准模式 / PTC 模式 / 极简模式 / 创造模式）；自定义预设显示其声明的名称。
   - 权限列表优先读取 `permissionPresets.catalog()`，支持在会话中即时切换 `只读` (`read-only`)、`工作区写入` (`workspace-write`)、`全系统` (`danger-full-access`)。
 - ⚙️ **原生 Web UI 配置**：
-  - 无需额外独立配置页：配置通过导出的 `Config` schema 由 DSH 0.2.1 设置系统投影，客户端在 **设置 → 插件 → QQ 机器人** 注册独立 tab，安全保密字段（`clientSecret`, `token`, `mcpManagerToken`）自动脱敏。
+  - 无需额外独立配置页：配置通过导出的 `Config` schema（全部 `volatile`）投影，客户端在 **设置 → 插件 → QQ 机器人** 注册独立 tab，按 7 个分区组织；保密字段（`clientSecret`、`token`、`mcpManagerToken`）自动脱敏。设置页顶部提供「检查更新」，仓库/发布页链接带图标。
 
 ---
 
@@ -172,45 +173,46 @@ QQ 开放平台 (q.qq.com)
 
 ## 🚀 快速上手
 
+一共三步：**装插件 → 填凭证 → 私聊机器人**。
+
 ### 1. 准备 QQ 开放平台机器人凭证
 
-1. 前往 [QQ 开放平台官网](https://q.qq.com/) 注册并登录，创建机器人应用：
-   - 个人开发者创建的**默认单聊机器人**即可直接使用，无需复杂配置。
-2. 在 **开发设置** 中获取：
-   - `AppID`（机器人应用 ID）
-   - `AppSecret`（开发者密钥）
-3. 机器人调试：**沙箱环境默认已开启** (`sandbox: true`)。机器人正式上线前请保持开启，并在开放平台「测试人员管理」中加入您的 QQ 号；正式发布后再关闭。
+1. 前往 [QQ 开放平台](https://q.qq.com/) 注册并登录，创建机器人应用；个人开发者的默认单聊机器人即可。
+2. 在**开发设置**中获取 `AppID` 与 `AppSecret`。
+3. 在「测试人员管理」中加入你自己的 QQ 号。插件的 `sandbox` **默认开启**，正式上线前请保持开启。
 
-## 🚀 安装与部署
+> 也可以跳过手工抄凭证，直接用下面的**扫码绑定**自动填入。
 
-本插件是标准 DSH Bundle 插件包，声明了 `dsh.bundle.patch` 和 `dsh.client`，通过 DSH 官方 CLI 命令一行即可完成安装与自动挂载：
+### 2. 安装插件
 
-### 1. 安装插件
+本插件是标准 DSH Bundle 插件（`dsh.bundle.patch` + `dsh.client`），用 DSH CLI 装到**你实际使用的 profile**：
 
-#### 从 npm 官方源安装（推荐）：
 ```bash
-dsh plugin --profile web add dsh-adapter-qq
+# <profile> 换成你的 profile 名；桌面版默认通常是 desktop
+dsh plugin --profile <profile> add dsh-adapter-qq
 ```
 
-#### 或从 GitHub 仓库安装：
+`--profile` 是必填项（不写会报 `required option '--profile <name>' not specified`）。可用 `dsh plugin --help` 查看；profile 不存在时 CLI 会提示如何用同一条命令创建它。
+
 ```bash
-dsh plugin --profile web add github:jixishi/dsh-adapter-qq
+# 升级 / 卸载
+dsh plugin --profile <profile> update
+dsh plugin --profile <profile> remove dsh-adapter-qq
 ```
 
-> **卸载插件**：
-> ```bash
-> dsh plugin --profile web remove dsh-adapter-qq
-> ```
+从源码开发时可用 `link:` 挂载本地目录（改动后触发一次 profile 重组即可生效，无需重启整个应用）：
 
----
+```powershell
+dsh plugin --profile <profile> add link:<本目录绝对路径>
+```
 
-### 2. 在 DSH Web UI 中配置
+### 3. 在 DSH Web UI 中配置
 
-安装完成后，启动 DSH Web 界面（默认 `http://127.0.0.1:3080`），进入 **设置 (Settings) → 插件(Plugins)** 页面，点击顶部的 **【QQ 机器人】** tab 进行配置：
+打开 DSH Web 界面（地址由 `dsh web` 启动时打印，**不是固定端口**），进入 **设置 → 插件 → 「QQ 机器人」** tab。
 
-**推荐：扫码绑定** —— 点击「生成绑定二维码」，用手机 QQ 扫码并按提示确认；成功后会自动填入 AppID、AppSecret 与绑定 OpenID 并保存。二维码约 2 分钟有效，过期可重新生成。若 q.qq.com 拒绝或网络异常，界面会显示 `[code] message`、`retcode` 与 `detail`，不会静默失败。
+**推荐：扫码绑定** —— 点击「生成绑定二维码」，用手机 QQ 扫码确认；成功后自动填入 AppID、AppSecret 与绑定 OpenID。二维码约 2 分钟有效，失败时界面会显示 `[code] message`、`retcode`、`detail`。也可以直接手工填表。
 
-> DSH 0.2.1 的设置入口是「设置 → 插件」页内的 tab（与本机 CliProxyAPI 等插件一致）；旧版本的「设置 → QQ 机器人卡片」已不存在。**配置字段全部声明为 volatile**，保存后会写入 profile patch 并即时热应用（修改 AppID/AppSecret/沙箱后自动重连，无需重启 DSH）；仅升级插件版本后 host 半更新需重启一次。版本更新记录见 [CHANGELOG.md](./CHANGELOG.md)。
+> 所有配置字段均声明为 `volatile`，保存后写入 profile patch 并即时热应用：修改 AppID/AppSecret/沙箱会自动重连，**不需要重启 DSH**。设置页还带「检查更新」（只对比 npm 版本号，不下载不安装）。
 
 | 配置项 | 说明 | 默认值 |
 | :--- | :--- | :--- |
@@ -223,6 +225,7 @@ dsh plugin --profile web add github:jixishi/dsh-adapter-qq
 | `defaultCwd` | 新建会话默认工作目录（留空使用当前 DSH 工作区） | `""` |
 | `autoRegisterMenu` | 启动后自动向 QQ 开放平台注册底部自定义快捷菜单 | `true` |
 | `markdown` | 消息回复优先使用 Markdown 渲染 | `true` |
+| `syncWebQuestions` | 把 Web UI 端输入的提问同步推送到 QQ（默认关闭，避免频繁打扰） | `false` |
 | `syncToolCalls` | 是否同步推送工具调用执行进度（防刷屏，默认关闭） | `false` |
 | `toolCallAggregateWindowMs` | 工具调用聚合推送窗口时间（毫秒，默认 30000ms / 30秒） | `30000` |
 | `sessionPageSize` | 会话列表每页数量（QQ 操作板建议 ≤6） | `6` |
@@ -239,7 +242,9 @@ dsh plugin --profile web add github:jixishi/dsh-adapter-qq
 | `notifyRestartRecovery` | 宿主重启后补发在途轮次的中断提示 | `false` |
 | `mcpManagerToken` | `@xxxyz/dsh-mcp-manager` 写操作令牌（可选，密文遮罩；也可用环境变量 `DSH_MCP_MANAGER_TOKEN`） | `""` |
 
-保存后，插件会立即热重载配置并自动建立 WebSocket 连接，无需重启 DSH。
+> 表中是**用户可见**的设置项。`token`、`activeSessionId`、`allowFrom` 等内部字段不占用设置页行，由插件自身维护。
+
+保存后，插件会立即热重载配置并自动建立 WebSocket 连接，无需重启 DSH。随后在 QQ 里给机器人发一条私聊消息，即完成 OpenID 绑定。
 
 ---
 
@@ -323,7 +328,7 @@ dsh plugin --profile web add github:jixishi/dsh-adapter-qq
 | `/menu` | 手动强制向 QQ 开放平台同步底部快捷菜单 (`PUT /v2/menu`) |
 | `/help` | 显示使用帮助菜单与全局快捷操作板 |
 
-### 4. 自由对话
+### 6. 自由对话
 
 在设置活跃会话后，**发送任意非 `/` 开头的文本**，将直接转发给 DSH Agent：
 - Agent 思考与执行过程在 QQ 与 Web UI 实时同步。
@@ -334,65 +339,23 @@ dsh plugin --profile web add github:jixishi/dsh-adapter-qq
 
 ## 🧪 单元测试
 
-本项目内置完整的单元测试套件（覆盖 API 客户端、媒体嗅探/富媒体上传、InlineKeyboard 与 emoji 操作板、会话分页、Gateway 网关协议、审批流与多问题/多选提问、消息桥接、渲染引擎与 agent 工具）：
+本项目内置单元测试套件，覆盖 API 客户端、富媒体上传、操作板与 emoji、会话分页、Gateway 协议、审批与多问题提问、消息桥接、订阅与定时任务通知、设置页契约、渲染引擎与 agent 工具：
 
 ```bash
-# 运行全部测试
-pnpm test
+node test/all.js
+# 或：pnpm test
 ```
 
-测试结果（DSH 0.2.1-rc.3 / Node 26，本机无头浏览器受限时浏览器用例会跳过）：
+本机实测（Windows / Node 26，无头浏览器受限时对应 1 例跳过）：
+
 ```text
-✔ QQApiClient (23 tests passed)
-✔ QQ media helpers (35 tests passed)
-✔ KeyboardBuilder (19 tests passed)
-✔ Session emoji palette (5 tests passed)
-✔ SessionManager (17 tests passed)
-✔ QQGatewayClient (6 tests passed)
-✔ QQ scan-to-bind protocol (11 tests passed)
-✔ ApprovalHandler / multi-question (6 tests passed)
-✔ MessageBridge (33 tests passed)
-✔ Config schema (5 tests passed)
-✔ subscription intervals / digest / store / scheduler (30 tests passed)
-✔ subscription lifecycle / delivery safety (6 tests passed)
-✔ subscription delivery form / image height budget (10 tests passed)
-✔ subscription HTTP route (7 tests passed)
-✔ client sidebar registration contract (6 tests passed)
-✔ subscription pane layout adapts to the viewport (6 tests passed)
-✔ relative activity time / workspace grouping (11 tests passed)
-✔ streaming reply option (4 tests passed)
-✔ Task overview (11 tests passed)
-✔ Usage billing integration (12 tests passed)
-✔ dsh-token-metrics integration (11 tests passed)
-✔ Render engines (33 passed, 1 skipped)
-✔ render output dir / card templates (11 tests passed)
-✔ Typst engine / markdown conversion (7 tests passed)
-✔ qq_render_text_image tool (14 tests passed)
-✔ AdminInventory (27 tests passed)
-✔ qq_send_file tool (20 tests passed)
-ℹ tests 387
-ℹ pass 386
-ℹ skipped 1
+ℹ tests 599
+ℹ pass 598
 ℹ fail 0
+ℹ skipped 1
 ```
 
----
-
-## 📦 自动发布（GitHub Actions）
-
-工作流：[`.github/workflows/publish.yml`](.github/workflows/publish.yml)
-
-- **触发**：推送 `v*` tag，或在 Actions → **Publish** → **Run workflow** 手动执行。
-- **流程**：`pnpm install --frozen-lockfile` → `pnpm test` → 校验 tag 与 `package.json` 版本一致 → 打包一次 → 发布 npmjs（OIDC）→ 同一产物准备 GitHub Packages 副本 → 再发布。
-- **npmjs（可信发布 / Trusted Publishing）**：发布 `dsh-adapter-qq@<version>` 到 `https://registry.npmjs.org/`，使用 **GitHub OIDC**，不需要 `NPM_TOKEN`。
-  - 前置条件（npm 官方要求）：本仓库 `package.json` 的 `repository.url` 必须与仓库完全一致（当前为 `git+https://github.com/jixishi/dsh-adapter-qq.git`）；workflow 文件名必须与 npmjs.com 上的配置一致（当前 **`publish.yml`**）；workflow 需声明 `permissions: id-token: write`；npm CLI ≥ 11.5.1（workflow 已自动校验）；仅支持 GitHub 托管 runner。
-  - workflow 会先清除 `.npmrc` 中任何 `_authToken`，并在检测到 `NODE_AUTH_TOKEN` 时直接失败——否则 token 会静默覆盖 OIDC。
-  - npmjs.com 的 Trusted Publisher 配置需在 **2 天内完成首次成功发布**才会从 `Pending validation` 转为已生效；过期需删除重建。
-  - 首次发布由 OIDC 自动生成 provenance，无需 `--provenance`。
-- **GitHub Packages**：发布 `@<owner>/dsh-adapter-qq@<version>` 到 `https://npm.pkg.github.com/`，使用自动注入的 `GITHUB_TOKEN`（workflow 已声明 `packages: write`）。GitHub Packages 的 npm registry 只接受**作用域包**，因此 `.github/scripts/prepare-gh-package.mjs` 会在 CI 中把包名与 `cordis.patch.yml` 改成 `@<owner>/dsh-adapter-qq` 后再打包；仓库内的默认包名保持 `dsh-adapter-qq` 不变。
-- **去重**：目标 registry 已存在同版本时自动跳过，重复运行安全。
-- **补发已存在的 tag**：早于本 workflow 的 tag（如 `v0.2.2`）不会自动触发；在 Actions 里手动跑一次 **Publish** 即可补发（版本取自 `package.json`）。
-- **从 GitHub Packages 安装**：`dsh plugin add @<owner>/dsh-adapter-qq@<version>`（作用域副本的 bundle patch 已同步改写）。
+> 测试里读取源码一律用 `fileURLToPath(import.meta.url)` 推导仓库根目录，不写绝对路径，保证 Linux CI 也能跑。
 
 ---
 
