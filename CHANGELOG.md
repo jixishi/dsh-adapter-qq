@@ -4,28 +4,34 @@ All notable changes to `dsh-adapter-qq` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [未发布]
+## [0.2.5] - 2026-11-09
 
 ### Added
 
 - **定时任务完成通知**（接入订阅管理）。官方 `@deepseek-ai/dsh-schedule` 触发任务时只会往目标会话里投一条提醒，QQ 端看不到执行结果。
-  - 识别 `user/message` 的 `source.kind === 'schedule'`，记录是哪个任务唤醒了该会话；该轮结束时推送「⏰ 任务名 · 已完成」+ 结果摘要。
+  - 识别 `user/message` 的 `source.kind === 'schedule'`，以及会话忙时 Host 发出的 `agent/inbox/spliced`（提醒排队到下一轮）；该轮结束时推送「⏰ 任务名 · 已完成」+ 结果摘要。
   - 结果较长（> 800 字符）时**渲染成图片**发送，避免单条消息 4000 字符上限截断。
-  - 订阅管理面板新增「定时任务通知」区，逐任务开关；开关存 `$DSH_HOME/adapter-qq/schedule-notices.json`，默认开启。
-  - 去重：同一任务同一次投递（按会话 + 秒）只播报一次，recurring 任务的批量投递不会重复通知。
-  - 组合里没装 `dsh-schedule` 时面板显示「未启用官方定时任务」，不报错。
+  - 订阅管理面板拆成「会话订阅 / 定时任务」两个 Tab；后者逐任务开关通知，开关存 `$DSH_HOME/adapter-qq/schedule-notices.json`，默认开启。
+  - 任务区块**常驻**：无任务 / 未启用 `dsh-schedule` / 读取失败分别给出明确文案，不再整块消失。
+  - 边界处理：按轮次绑定，排队中的提醒不会借用别的轮次的结果；每个会话维护投递队列，两个任务同秒触发各自播报（去重键包含 taskId）；30 分钟未拿到自己轮次的投递丢弃；组合里没装 `dsh-schedule` 时面板显示「未启用官方定时任务」而不报错。
   - 不做任务增删改：任务管理仍在 DSH「任务」页面。
+- **设置页「插件更新」检查**。宿主新增 `GET /dsh-adapter-qq/update-check`（10 分钟缓存），只对比 `package.json` 版本与 npm `latest`，不下载不安装；失败时静默显示「无法检查」。附带 npm / GitHub 仓库 / Releases / Issue 链接与内联 SVG 图标，README 徽章改为动态 npm 版本 / 下载量 / License / Node / DSH / Cordis / QQ Open Platform。
+- **设置页分区化**：七个带标题的分区、分区卡片边框、去掉左右边距保留上下边距；设置页补齐 `busyDelivery`、`notifyTurnAbnormal`、`notifyRestartRecovery` 三个此前只有 schema 没有 UI 行的配置项。
+- **`applied.json` 运行版本标记**：`apply()` 启动时把时间 / pid / 版本写入 `$DSH_HOME/adapter-qq/applied.json`，用于确认宿主当前加载的是哪份代码（profile 重组热更时不会新起进程）。
+- **测试覆盖补全**：新增 `test/apply-stamp.test.js`、`test/cards.test.js`、`test/helpers.test.js`、`test/settings-coverage.test.js`、`test/update-route.test.js`、`test/schedule-notices.test.js`、`test/client-registration.test.js` 等；用例数从 471 增至 595。
 
 ### Fixed
 
+- **客户端 bundle 每次更新都注册失败**。DSH 把多个客户端插件拼成一个共享全局作用域的 classic script，本包在顶层声明 `const factory`，与同批次插件冲突 → 解析错误 → `loaded without registering`。改为零顶层声明、单次 `window.__ModuleLoader__.load({ id, factory })` 注册，并移除遗留的 `dsh-plugin-adapter-qq` 二次注册。
+- **卡片图片退化成纯文本排版**。真实原因是渲染输出目录不可写、以及 Typst 子进程自己 `open()` 输出文件被沙箱拒绝（`failed to write PNG file (os error 5)`）。`ensureOutputDir` 增加写探针并回退到插件内 `.renders`；Typst 改为输出到 stdout、由 Node 落盘。`/tasks`、`/status`、`/jobs` 同时补上 `typstBody`。
+- **`/switch` 必崩**：`cmdSwitchSession` 用了未声明的 `targetId`。改为 `target.sessionId`；测试补上 `resolveLastUserMessage` mock，使这一行真正被执行（此前可选链短路掩盖了崩溃）。
 - **`/preset` 显示内部 id，并把内置预设标成「自定义」**。宿主 `agentPresets.list()` 返回 `{ id, name?, description?, order?, broken? }` —— **没有 `trust` 字段**，四个内置预设也不带 `name`/`description`。旧代码按 `item.trust === 'system'` 判来源、用 `item.id` 顶名称，于是列表变成 `standard [自定义]: 用户自定义预设`。
-  - 名称：`name` 缺失时回落到共享标签表（标准模式 / PTC 模式 / 极简模式 / 创造模式），描述同理。
-  - 来源：有 `broken` 标「加载失败」，否则按 id 是否属于内置四个标「内置 / 自定义」，不再依赖不存在的字段。
-  - `/preset` 列表、当前预设行、切换回执、选择按键、`/status` 卡片、会话创建回执统一走 `resolvePresetLabel()`，不再直接显示 id。
-- **三个设置项没有 UI 入口**。设置页是手写的字段列表（`updateField("key")` 行），不是按 schema 渲染的表单，因此只加 config 字段不会出现在界面上 —— `busyDelivery`、`notifyTurnAbnormal`、`notifyRestartRecovery` 三个键就处于「能生效但看不见」的状态。已补齐三行，并新增 `test/settings-coverage.test.js` 双向校验 schema 与设置页行：漏行现在是失败测试，而不是静默缺口（`token`、`activeSessionId`、`allowFrom` 作为内部字段排除）。
-- **「插话方式」改为子菜单注册**。原先是一个顶层 `send_message` 项，占掉一个顶层名额（QQ 上限 10）且无法展示可选项。现在与「权限模式」「模型与思考」同构：子菜单下含 立即插话 `/delivery steer`、排队 `/delivery queue`、交互式选择 `/delivery`。
-
-注：这些改动在 `0.2.4` 发布之后合入 `main`，npm 上的 `0.2.4` 不包含它们（npm 不允许覆盖已发布版本）。
+  - 名称与描述回落到共享标签表（标准模式 / PTC 模式 / 极简模式 / 创造模式）；来源改为按 id 判定，有 `broken` 标「加载失败」。
+  - `/preset` 列表、当前预设行、切换回执、选择按键、`/status` 卡片、会话创建回执统一走 `resolvePresetLabel()`。
+- **「插话方式」改为子菜单注册**：原先是顶层 `send_message` 项，占掉一个顶层名额（QQ 上限 10）且无法展示可选项；现在与「权限模式」「模型与思考」同构。
+- **自动推送不再挂整套按钮盘**：定时任务完成通知、轮次异常结束通知、重启恢复通知都是后台推送，去掉 `buildCurrentSessionBoard()` / `buildTurnEndBoard()`；用户主动发的命令回执仍保留操作板。
+- **面板回归**：Tab 拆分时漏掉的「刷新 / 新增订阅 / 立即推送」操作行已恢复；任务行改为紧凑布局（按钮不再被拉成整行白条），显示状态、计划时间与上次通知时间；任务 Tab 不再套用「新增块」的上边框与 sticky 表头。
+- **文档**：README 快速开始按当前 CLI 与 Web URL 实际行为重写（`--profile <name>` 必填、端口不固定、配置热应用），删除过时的测试清单与「自动发布（GitHub Actions）」整章；修正渲染输出目录的错误记述。
 
 ## [0.2.4] - 2026-11-06
 
@@ -451,6 +457,7 @@ Targets **DeepSeek Harness 0.2.1-rc.3** (`engines.dsh: >=0.2.1-rc.3 <0.3.0`).
   keyboards/emoji, session pagination, gateway, approvals/questions, bridge,
   render engines, Typst, inventory and both agent tools.
 
+[0.2.5]: https://github.com/jixishi/dsh-adapter-qq/releases/tag/v0.2.5
 [0.2.4]: https://github.com/jixishi/dsh-adapter-qq/releases/tag/v0.2.4
 [0.2.3]: https://github.com/jixishi/dsh-adapter-qq/releases/tag/v0.2.3
 [0.2.2]: https://github.com/jixishi/dsh-adapter-qq/releases/tag/v0.2.2
