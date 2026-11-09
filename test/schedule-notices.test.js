@@ -239,12 +239,8 @@ describe('MessageBridge schedule notifications', () => {
   it('does not label a turn that was already running when the reminder arrived', async () => {
     const { bridge, sent } = harness();
     // A manual turn is in flight; the reminder is queued behind it.
-    bridge.onDshTurnStart('sess-1', { data: { turn: 'manual-turn' } });
-    bridge.turnState.get('sess-1').startedAt = Date.now() - 5000;
-    bridge.turnState.get('sess-1').lastText = '这是手动提问的回答';
     bridge.noteScheduleRun('sess-1', scheduleEvent());
-
-    await bridge.onDshTurnEnd('u1', 'sess-1', { data: { turn: 'manual-turn', reason: { kind: 'completed' } } });
+    await bridge.trackScheduleEvent('sess-1', { type: 'turn/end', data: { turn: 'manual-turn', reason: { kind: 'completed' } } }, 'u1');
     await new Promise((r) => setTimeout(r, 5));
 
     assert.equal(sent.length, 0, 'the queued delivery must not borrow another turn');
@@ -259,11 +255,15 @@ describe('MessageBridge schedule notifications', () => {
     run.taskId = 't1';
     run.title = '每日备份';
 
-    bridge.onDshTurnStart('sess-1', { data: { turn: 'schedule-turn' } });
+    await bridge.trackScheduleEvent('sess-1', { type: 'turn/start', data: { turn: 'schedule-turn' } }, 'u1');
     assert.equal(run.turn, 'schedule-turn', 'the delivery binds to the turn it starts');
-    bridge.turnState.get('sess-1').lastText = '备份完成，共 12 个文件';
 
-    await bridge.onDshTurnEnd('u1', 'sess-1', { data: { turn: 'schedule-turn', reason: { kind: 'completed' } } });
+    await bridge.trackScheduleEvent(
+      'sess-1',
+      { type: 'assistant/message', data: { message: { content: [{ type: 'text', text: '备份完成，共 12 个文件' }] } } },
+      'u1'
+    );
+    await bridge.trackScheduleEvent('sess-1', { type: 'turn/end', data: { turn: 'schedule-turn', reason: { kind: 'completed' } } }, 'u1');
     await new Promise((r) => setTimeout(r, 5));
 
     assert.equal(sent.length, 1);
@@ -272,13 +272,37 @@ describe('MessageBridge schedule notifications', () => {
     assert.equal(bridge.scheduleRuns.size, 0, 'the run is consumed once');
   });
 
+  it('reports a task that fires in a session which is not the active one', async () => {
+    const { bridge, sent } = harness();
+    // The active session is sess-1; the task is bound to sess-2.
+    const session = { id: 'sess-2' };
+
+    await bridge.handleDshSessionEvent(session, scheduleEvent());
+    const run = bridge.scheduleRuns.get('sess-2');
+    assert.ok(run, 'the delivery is tracked before the active-session filter');
+    run.taskId = 't2';
+    run.title = '夜间巡检';
+
+    await bridge.handleDshSessionEvent(session, { type: 'turn/start', data: { turn: 't7' } });
+    await bridge.handleDshSessionEvent(session, {
+      type: 'assistant/message',
+      data: { message: { content: [{ type: 'text', text: '巡检通过，无异常' }] } },
+    });
+    await bridge.handleDshSessionEvent(session, { type: 'turn/end', data: { turn: 't7', reason: { kind: 'completed' } } });
+    await new Promise((r) => setTimeout(r, 5));
+
+    assert.equal(sent.length, 1, 'a background session still notifies');
+    assert.match(sent[0].markdown, /夜间巡检/);
+    assert.match(sent[0].markdown, /巡检通过，无异常/);
+  });
+
   it('drops a delivery that never got its own turn', async () => {
     const { bridge } = harness();
     bridge.noteScheduleRun('sess-1', scheduleEvent());
     const run = bridge.scheduleRuns.get('sess-1');
     run.at = Date.now() - 31 * 60 * 1000;
 
-    bridge.onDshTurnStart('sess-1', { data: { turn: 'later-turn' } });
+    await bridge.trackScheduleEvent('sess-1', { type: 'turn/start', data: { turn: 'later-turn' } }, 'u1');
     assert.equal(bridge.scheduleRuns.size, 0, 'a stale delivery is discarded, not rebound');
   });
 
