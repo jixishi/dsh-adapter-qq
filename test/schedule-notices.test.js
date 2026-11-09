@@ -80,6 +80,13 @@ describe('ScheduleNoticeStore', () => {
     assert.notEqual(deliveryKey('a', 1_000), deliveryKey('b', 1_000));
     assert.notEqual(deliveryKey('a', 1_000), deliveryKey('a', 2_000));
   });
+
+  it('separates two tasks firing in one session within the same second', () => {
+    // Two scheduled tasks bound to one session can fire together; they are two
+    // deliveries, and keying by session alone collapsed them into one notice.
+    assert.notEqual(deliveryKey('s1', 1_000, 'task-a'), deliveryKey('s1', 1_000, 'task-b'));
+    assert.equal(deliveryKey('s1', 1_000, 'task-a'), deliveryKey('s1', 1_000, 'task-a'));
+  });
 });
 
 describe('subscription route task operations', () => {
@@ -216,10 +223,13 @@ describe('MessageBridge schedule notifications', () => {
     data: { source: { kind: 'schedule' }, content: [{ type: 'text', text }] },
   });
 
+  /** First tracked run of a session (the map holds a queue per session). */
+  const firstRun = (bridge, sessionId = 'sess-1') => (bridge.scheduleRuns.get(sessionId) || [])[0];
+
   it('recognises a schedule delivery', async () => {
     const { bridge } = harness();
     bridge.noteScheduleRun('sess-1', scheduleEvent());
-    const run = bridge.scheduleRuns.get('sess-1');
+    const run = firstRun(bridge);
     assert.ok(run, 'the run is tracked');
     assert.match(run.text, /每日备份/);
     bridge.scheduleRuns.clear();
@@ -228,12 +238,74 @@ describe('MessageBridge schedule notifications', () => {
   it('reports the result when that turn ends', async () => {
     const { bridge, sent } = harness();
     bridge.noteScheduleRun('sess-1', scheduleEvent());
-    bridge.scheduleRuns.get('sess-1').taskId = 't1';
-    bridge.scheduleRuns.get('sess-1').title = '每日备份';
-    await bridge.notifyScheduleRun('u1', 'sess-1', bridge.scheduleRuns.get('sess-1'), { lastText: '备份完成，共 12 个文件' }, 'completed');
+    const run = firstRun(bridge);
+    run.taskId = 't1';
+    run.title = '每日备份';
+    await bridge.notifyScheduleRun('u1', 'sess-1', run, { lastText: '备份完成，共 12 个文件' }, 'completed');
     assert.equal(sent.length, 1);
     assert.match(sent[0].markdown, /每日备份/);
     assert.match(sent[0].markdown, /备份完成，共 12 个文件/);
+  });
+
+  it('keeps every delivery when a session accumulates a queue', async () => {
+    const { bridge } = harness();
+    bridge.noteScheduleRun('sess-1', scheduleEvent('提醒一'));
+    bridge.noteScheduleRun('sess-1', scheduleEvent('提醒二'));
+    const runs = bridge.scheduleRuns.get('sess-1');
+    assert.equal(runs.length, 2, 'a busy session queues deliveries instead of overwriting them');
+    assert.match(runs[0].text, /提醒一/);
+    assert.match(runs[1].text, /提醒二/);
+    bridge.scheduleRuns.clear();
+  });
+
+  it('reports each queued delivery once the shared turn ends', async () => {
+    const { bridge, sent } = harness();
+    bridge.noteScheduleRun('sess-1', scheduleEvent('提醒一'));
+    bridge.noteScheduleRun('sess-1', scheduleEvent('提醒二'));
+    const runs = bridge.scheduleRuns.get('sess-1');
+    runs[0].taskId = 't1';
+    runs[0].title = '任务一';
+    runs[1].taskId = 't2';
+    runs[1].title = '任务二';
+
+    await bridge.trackScheduleEvent('sess-1', { type: 'turn/start', data: { turn: 't9' } }, 'u1');
+    await bridge.trackScheduleEvent(
+      'sess-1',
+      { type: 'assistant/message', data: { message: { content: [{ type: 'text', text: '两个任务都完成' }] } } },
+      'u1'
+    );
+    await bridge.trackScheduleEvent('sess-1', { type: 'turn/end', data: { turn: 't9', reason: { kind: 'completed' } } }, 'u1');
+    await new Promise((r) => setTimeout(r, 5));
+
+    assert.equal(sent.length, 2, 'both deliveries are announced');
+    assert.ok(sent.some((m) => /任务一/.test(m.markdown)));
+    assert.ok(sent.some((m) => /任务二/.test(m.markdown)));
+    assert.equal(bridge.scheduleRuns.size, 0, 'the queue drains');
+  });
+
+  it('tracks a reminder the host queued on a busy session', async () => {
+    const { bridge } = harness();
+    // A busy session gets `agent/inbox/spliced` instead of `user/message`.
+    await bridge.handleDshSessionEvent(
+      { id: 'sess-1' },
+      {
+        type: 'agent/inbox/spliced',
+        data: {
+          target: 'next-turn',
+          inserted: [
+            {
+              content: [{ type: 'text', text: '[SCHEDULE REMINDER] reminder_prompt_json: "每日备份"' }],
+              source: { kind: 'schedule' },
+            },
+          ],
+        },
+      }
+    );
+
+    const run = firstRun(bridge);
+    assert.ok(run, 'the queued reminder is tracked');
+    assert.match(run.text, /每日备份/);
+    bridge.scheduleRuns.clear();
   });
 
   it('does not label a turn that was already running when the reminder arrived', async () => {
@@ -244,14 +316,14 @@ describe('MessageBridge schedule notifications', () => {
     await new Promise((r) => setTimeout(r, 5));
 
     assert.equal(sent.length, 0, 'the queued delivery must not borrow another turn');
-    assert.ok(bridge.scheduleRuns.get('sess-1'), 'the run waits for the turn it starts');
+    assert.ok(firstRun(bridge), 'the run waits for the turn it starts');
     bridge.scheduleRuns.clear();
   });
 
   it('reports the run once its own turn ends', async () => {
     const { bridge, sent } = harness();
     bridge.noteScheduleRun('sess-1', scheduleEvent());
-    const run = bridge.scheduleRuns.get('sess-1');
+    const run = firstRun(bridge);
     run.taskId = 't1';
     run.title = '每日备份';
 
@@ -278,7 +350,7 @@ describe('MessageBridge schedule notifications', () => {
     const session = { id: 'sess-2' };
 
     await bridge.handleDshSessionEvent(session, scheduleEvent());
-    const run = bridge.scheduleRuns.get('sess-2');
+    const run = firstRun(bridge, 'sess-2');
     assert.ok(run, 'the delivery is tracked before the active-session filter');
     run.taskId = 't2';
     run.title = '夜间巡检';
@@ -299,7 +371,7 @@ describe('MessageBridge schedule notifications', () => {
   it('drops a delivery that never got its own turn', async () => {
     const { bridge } = harness();
     bridge.noteScheduleRun('sess-1', scheduleEvent());
-    const run = bridge.scheduleRuns.get('sess-1');
+    const run = firstRun(bridge);
     run.at = Date.now() - 31 * 60 * 1000;
 
     await bridge.trackScheduleEvent('sess-1', { type: 'turn/start', data: { turn: 'later-turn' } }, 'u1');
