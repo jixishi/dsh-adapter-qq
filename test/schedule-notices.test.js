@@ -245,6 +245,8 @@ describe('MessageBridge schedule notifications', () => {
     assert.equal(sent.length, 1);
     assert.match(sent[0].markdown, /每日备份/);
     assert.match(sent[0].markdown, /备份完成，共 12 个文件/);
+    // A delivery is a push, not a reply: it must not repeat the action board.
+    assert.equal(sent[0].keyboard, undefined, 'no action board under a task notice');
   });
 
   it('keeps every delivery when a session accumulates a queue', async () => {

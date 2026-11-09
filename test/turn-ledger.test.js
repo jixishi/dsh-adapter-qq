@@ -284,7 +284,7 @@ describe('MessageBridge.checkRestartRecovery', () => {
     assert.equal(await bridge.checkRestartRecovery(), 2);
     assert.equal(sent.length, 2);
     assert.match(sent[0].markdown, /重启/);
-    assert.ok(sent[0].keyboard, 'the notice offers the status board');
+    assert.equal(sent[0].keyboard, undefined, 'an automatic notice carries no action board');
     assert.deepEqual(consumed, ['s1', 's2'], 'each entry is consumed exactly once');
   });
 

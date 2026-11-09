@@ -49,7 +49,7 @@ function makeBridge({ config = {}, turnEnd } = {}) {
 const TURN_END = (reason) => ({ type: 'turn/end', data: { turn: 1, reason } });
 
 describe('abnormal turn-end notices (bridge integration)', () => {
-  it('pushes a notice with a keyboard when the turn errors', async () => {
+  it('pushes a notice without a keyboard when the turn errors', async () => {
     const { bridge, sent } = makeBridge();
     bridge.onDshTurnStart('sess-active', { data: { turn: 1 } });
     bridge.noteTurnTool('sess-active', { data: { turn: 1 } }, 'bash');
@@ -61,7 +61,9 @@ describe('abnormal turn-end notices (bridge integration)', () => {
     assert.match(msg.markdown, /执行出错/);
     assert.match(msg.markdown, /bash/);
     assert.match(msg.markdown, /boom/);
-    assert.ok(msg.keyboard, 'the notice carries an action board');
+    // An automatic notice must not repeat the whole action board: the buttons
+    // belong to messages the user asked for.
+    assert.equal(msg.keyboard, undefined, 'no action board under a background notice');
     assert.equal(msg.openid, 'user_1');
   });
 
