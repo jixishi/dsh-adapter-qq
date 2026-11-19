@@ -403,15 +403,23 @@ describe('SessionManager', () => {
     assert.deepEqual(empty.map((p) => p.id), ['read-only', 'workspace-write', 'danger-full-access']);
   });
 
-  it('should prefer DSH sessionTitle/sessionQuery services for session titles', () => {
+  it('should prefer DSH sessionTitle for live sessions and never invoke async sessionQuery.readTitle', () => {
     const live = { id: 'sid-1' };
+    let readTitleCalls = 0;
     const mockCtx = {
       get: (name) => {
         if (name === 'sessionTitle') {
           return { get: (session) => ({ title: session === live ? '标题服务' : '' }) };
         }
         if (name === 'sessionQuery') {
-          return { readTitle: (sid) => ({ title: sid === 'sid-2' ? '查询服务标题' : '' }) };
+          // Real DSH sessionQuery.readTitle is async and runs full-corpus persistence.list()
+          // + .zstd decompression; resolveSessionTitle must never call it in a listing loop.
+          return {
+            readTitle: async () => {
+              readTitleCalls += 1;
+              return '不应该被调用';
+            },
+          };
         }
         return undefined;
       },
@@ -419,8 +427,12 @@ describe('SessionManager', () => {
 
     const manager = new SessionManager({ ctx: mockCtx });
     assert.equal(manager.resolveSessionTitle('sid-1', { title: 'item-title' }, live), '标题服务');
-    assert.equal(manager.resolveSessionTitle('sid-2', { title: 'item-title' }, { id: 'other' }), '查询服务标题');
-    assert.equal(manager.resolveSessionTitle('sid-3', { title: 'item-title' }, { id: 'other' }), 'item-title');
+    assert.equal(manager.resolveSessionTitle('sid-2', { title: 'item-title' }, { id: 'other' }), 'item-title');
+    assert.equal(
+      manager.resolveSessionTitle('sid-3', { projections: { values: { title: '投影标题' } } }, { id: 'other' }),
+      '投影标题'
+    );
+    assert.equal(readTitleCalls, 0);
 
     const throwingCtx = {
       get: () => ({
@@ -428,12 +440,105 @@ describe('SessionManager', () => {
           throw new Error('boom');
         },
         readTitle: () => {
+          readTitleCalls += 1;
           throw new Error('boom');
         },
       }),
     };
     const throwing = new SessionManager({ ctx: throwingCtx });
     assert.equal(throwing.resolveSessionTitle('sid-4', { title: 'item-title' }, { id: 'sid-4' }), 'item-title');
+    assert.equal(readTitleCalls, 0);
+  });
+
+  it('should never invoke sessionQuery.readTitle and should single-flight/TTL-cache listSessions()', async () => {
+    let listCalls = 0;
+    let readTitleCalls = 0;
+    const items = Array.from({ length: 50 }, (_, i) => ({
+      sessionId: `cold-${i}`,
+      title: i % 2 === 0 ? `Cold ${i}` : undefined,
+      projections: i % 2 === 1 ? { values: { title: `Proj ${i}` } } : undefined,
+      cwd: `/tmp/ws-${i}`,
+      origin: i === 49 ? 'subagent' : undefined,
+      updatedAt: 1_700_000_000_000 + i,
+    }));
+
+    const manager = new SessionManager({
+      ctx: {
+        get: (name) => {
+          if (name === 'sessionController') {
+            return {
+              list: async () => {
+                listCalls += 1;
+                return { items };
+              },
+            };
+          }
+          if (name === 'sessionQuery') {
+            return {
+              readTitle: async () => {
+                readTitleCalls += 1;
+                return 'SHOULD NOT RUN';
+              },
+            };
+          }
+          return undefined;
+        },
+      },
+    });
+
+    // Concurrent calls share a single in-flight controller.list()
+    const [a, b] = await Promise.all([manager.listSessions(), manager.listSessions()]);
+    assert.equal(listCalls, 1);
+    assert.equal(readTitleCalls, 0);
+    assert.equal(a.length, 49);
+    assert.equal(b.length, 49);
+
+    // Subsequent call within TTL hits the cache
+    const c = await manager.listSessions();
+    assert.equal(listCalls, 1);
+    assert.equal(c.length, 49);
+
+    // Explicit invalidation forces a fresh list()
+    manager.invalidateListCache();
+    await manager.listSessions();
+    assert.equal(listCalls, 2);
+    assert.equal(readTitleCalls, 0);
+  });
+
+  it('should resolve live sessions in O(1) without calling sessionController.list', async () => {
+    let listCalls = 0;
+    const live = {
+      id: 'live-1',
+      header: { id: 'live-1', cwd: '/repo/live', agentPreset: 'ptc', title: 'Live Title' },
+    };
+    const services = {
+      sessions: new Map([['live-1', live]]),
+      agents: new Map([['live-1', { status: 'running' }]]),
+      permissionPresets: { current: () => 'workspace-write' },
+      sessionController: {
+        list: async () => {
+          listCalls += 1;
+          return { items: [] };
+        },
+      },
+    };
+    const manager = new SessionManager({
+      ctx: { get: (name) => services[name] },
+      getActiveSessionId: () => 'live-1',
+    });
+
+    const byId = await manager.getSessionInfoById('live-1');
+    assert.equal(byId.sessionId, 'live-1');
+    assert.equal(byId.cwd, '/repo/live');
+    assert.equal(byId.title, 'Live Title');
+    assert.equal(byId.running, true);
+    assert.equal(byId.permission, 'workspace-write');
+    assert.equal(listCalls, 0);
+
+    const active = await manager.getActiveSessionInfo();
+    assert.equal(active.sessionId, 'live-1');
+    assert.equal(active.cwd, '/repo/live');
+    assert.equal(listCalls, 0);
   });
 
   describe('session paging', () => {

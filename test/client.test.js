@@ -665,4 +665,84 @@ describe('QQApiClient send fallbacks', () => {
     assert.equal(bodies[1].content, '# Title\n\nbody');
     assert.deepEqual(bodies[1].keyboard, { content: { rows: [] } });
   });
+
+  it('preserves msg_id on markdown-to-plain-text fallback and only drops it on msg_id failure', async () => {
+    const client = configuredClient();
+    const bodies = [];
+
+    await withFetch(async (_url, opts = {}) => {
+      const body = JSON.parse(opts.body);
+      bodies.push(body);
+      if (bodies.length === 1) {
+        return jsonResponse({ code: 40004, message: 'markdown template permission denied' }, 403);
+      }
+      if (bodies.length === 2) {
+        return jsonResponse({ code: 40034005, message: 'msg_id expired' }, 400);
+      }
+      return jsonResponse({ id: 'msg_plain_proactive' });
+    }, async () => {
+      const res = await client.sendC2CMessage('user_md_passive', {
+        markdown: '**hi**',
+        msg_id: 'passive_1',
+        keyboard: { content: { rows: [] } },
+      });
+      assert.deepEqual(res, { id: 'msg_plain_proactive' });
+    });
+
+    assert.equal(bodies.length, 3);
+    assert.deepEqual(
+      bodies.map((b) => [b.msg_type, b.msg_id ?? null]),
+      [
+        [2, 'passive_1'],
+        [0, 'passive_1'],
+        [0, null],
+      ]
+    );
+    assert.equal(bodies[1].content, '**hi**');
+    assert.notEqual(bodies[2].msg_seq, bodies[1].msg_seq);
+  });
+
+  it('retries markdown without msg_id and fresh msg_seq when error is msg_id expiration', async () => {
+    const client = configuredClient();
+    const bodies = [];
+
+    await withFetch(async (_url, opts = {}) => {
+      const body = JSON.parse(opts.body);
+      bodies.push(body);
+      if (bodies.length === 1) {
+        return jsonResponse({ code: 40034005, message: 'msg_id expired' }, 400);
+      }
+      return jsonResponse({ id: 'msg_md_proactive' });
+    }, async () => {
+      const res = await client.sendC2CMessage('user_md_expired', {
+        markdown: '**hi**',
+        msg_id: 'expired_1',
+      });
+      assert.deepEqual(res, { id: 'msg_md_proactive' });
+    });
+
+    assert.equal(bodies.length, 2);
+    assert.equal(bodies[0].msg_type, 2);
+    assert.equal(bodies[0].msg_id, 'expired_1');
+    assert.equal(bodies[1].msg_type, 2);
+    assert.equal(Object.hasOwn(bodies[1], 'msg_id'), false);
+    assert.notEqual(bodies[1].msg_seq, bodies[0].msg_seq);
+  });
+
+  it('never retries sendTyping (msg_type=6) without msg_id on failure', async () => {
+    const client = configuredClient();
+    const bodies = [];
+
+    await withFetch(async (_url, opts = {}) => {
+      bodies.push(JSON.parse(opts.body));
+      return jsonResponse({ code: 40054005, message: 'invalid msg_id' }, 400);
+    }, async () => {
+      const res = await client.sendTyping('user_typing', 'typing_msg_1');
+      assert.equal(res, null);
+    });
+
+    assert.equal(bodies.length, 1);
+    assert.equal(bodies[0].msg_type, 6);
+    assert.equal(bodies[0].msg_id, 'typing_msg_1');
+  });
 });

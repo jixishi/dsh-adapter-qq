@@ -1,5 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { EventEmitter } from 'node:events';
+import WebSocket from 'ws';
 import { QQGatewayClient, OpCode, DEFAULT_INTENTS } from '../lib/qq/gateway.js';
 
 describe('QQGatewayClient', () => {
@@ -137,5 +139,103 @@ describe('QQGatewayClient', () => {
     assert.equal(gw.sessionId, null);
     assert.equal(gw.lastSeq, null);
     assert.equal(reconnected, true);
+  });
+
+  it('keeps an error listener on CONNECTING sockets closed during cleanupSocket()', async () => {
+    const gw = new QQGatewayClient({ apiClient: {}, logger: { info() {}, warn() {}, error() {} } });
+    const fakeWs = new EventEmitter();
+    let terminated = false;
+    let closed = false;
+    fakeWs.readyState = WebSocket.CONNECTING;
+    fakeWs.terminate = () => {
+      terminated = true;
+      process.nextTick(() => {
+        fakeWs.emit('error', new Error('WebSocket was closed before the connection was established'));
+      });
+    };
+    fakeWs.close = () => {
+      closed = true;
+    };
+
+    gw.ws = fakeWs;
+    gw.setupSocketHandlers(fakeWs);
+    gw.cleanupSocket();
+
+    assert.equal(terminated, true);
+    assert.equal(closed, false);
+    assert.equal(gw.ws, null);
+    assert.ok(fakeWs.listenerCount('error') >= 1);
+
+    // Wait past nextTick so deferred emit('error') fires cleanly without uncaught exception
+    await new Promise((r) => setTimeout(r, 10));
+  });
+
+  it('tracks isActiveOrConnecting() across handshake, open, and cleanup states', () => {
+    const gw = new QQGatewayClient({ apiClient: {} });
+    assert.equal(gw.isActiveOrConnecting(), false);
+
+    gw.connecting = true;
+    assert.equal(gw.isActiveOrConnecting(), true);
+
+    gw.connecting = false;
+    gw.ws = { readyState: WebSocket.CONNECTING };
+    assert.equal(gw.isActiveOrConnecting(), true);
+
+    gw.ws = { readyState: WebSocket.OPEN };
+    assert.equal(gw.isActiveOrConnecting(), true);
+
+    gw.ws = { readyState: WebSocket.CLOSED };
+    assert.equal(gw.isActiveOrConnecting(), false);
+
+    gw.connected = true;
+    assert.equal(gw.isActiveOrConnecting(), true);
+  });
+
+  it('ignores stale getGatewayUrl() completions after disconnect() or newer connect()', async () => {
+    let resolveFirst;
+    let rejectFirst;
+    let calls = 0;
+    const apiClient = {
+      getGatewayUrl: () => {
+        calls += 1;
+        return new Promise((resolve, reject) => {
+          resolveFirst = resolve;
+          rejectFirst = reject;
+        });
+      },
+    };
+    const gw = new QQGatewayClient({ apiClient, logger: { info() {}, warn() {}, error() {} } });
+
+    const p1 = gw.connect();
+    assert.equal(gw.connecting, true);
+    assert.equal(calls, 1);
+
+    // Disconnect supersedes the in-flight getGatewayUrl fetch
+    gw.disconnect();
+    assert.equal(gw.connecting, false);
+    resolveFirst('wss://127.0.0.1:1/stale');
+    await p1;
+    assert.equal(gw.ws, null);
+    assert.equal(gw.isActiveOrConnecting(), false);
+
+    // Rejected stale fetch after disconnect must not reset state or schedule reconnect
+    const p2 = gw.connect();
+    gw.disconnect();
+    rejectFirst(new Error('network abort'));
+    await p2;
+    assert.equal(gw.reconnectTimer, null);
+  });
+
+  it('does not throw when socket errors fire without external gateway error listeners', () => {
+    const gw = new QQGatewayClient({ apiClient: {}, logger: { info() {}, warn() {}, error() {} } });
+    const fakeWs = new EventEmitter();
+    fakeWs.readyState = WebSocket.OPEN;
+    gw.ws = fakeWs;
+    gw.setupSocketHandlers(fakeWs);
+
+    assert.equal(gw.listenerCount('error'), 0);
+    assert.doesNotThrow(() => {
+      fakeWs.emit('error', new Error('transient socket error'));
+    });
   });
 });

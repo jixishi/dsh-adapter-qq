@@ -1204,4 +1204,102 @@ describe('MessageBridge', () => {
     harness.bridge.stop();
   });
 
+  it('should not call getSessionInfoById or sessionController.list for text-only handleUserPrompt', async () => {
+    const harness = createTestHarness();
+    let getInfoCalls = 0;
+    let listCalls = 0;
+    const origGetInfo = harness.bridge.sessionManager.getSessionInfoById;
+    harness.bridge.sessionManager.getSessionInfoById = async (...args) => {
+      getInfoCalls += 1;
+      return origGetInfo(...args);
+    };
+    harness.ctx.sessionController.list = async () => {
+      listCalls += 1;
+      return { items: [] };
+    };
+
+    const prompts = [];
+    harness.ctx.on('prompt_received', (req) => prompts.push(req));
+
+    await harness.bridge.handleUserPrompt('user_target', '纯文本消息', [], 'msg_text_only');
+    assert.equal(prompts.length, 1);
+    assert.equal(getInfoCalls, 0);
+    assert.equal(listCalls, 0);
+    harness.bridge.stop();
+  });
+
+  it('should retain passive msg_id up to 50 minutes and omit it past the window', async () => {
+    const harness = createTestHarness();
+    const { bridge, sentMessages } = harness;
+
+    // Within 50 min (30 min elapsed) -> retain msg_id
+    bridge.lastMsgId = 'passive_30m';
+    bridge.lastMsgTime = Date.now() - 30 * 60 * 1000;
+    bridge.assistantBuffers.set('sess-1', '流式分片');
+    bridge.streamState.set('sess-1', { sent: 0, timer: null, sending: false });
+    await bridge.flushStreamChunk('user_target', 'sess-1');
+    assert.equal(sentMessages.at(-1).msg.msg_id, 'passive_30m');
+
+    await bridge.onDshAssistantMessage('user_target', 'sess-1', {
+      data: { message: { content: [{ type: 'text', text: '30分钟后回复' }] } },
+    });
+    assert.equal(sentMessages.at(-1).msg.msg_id, 'passive_30m');
+
+    await bridge.onDshTurnEnd('user_target', 'sess-1', {
+      data: { turn: 1, reason: { kind: 'error', message: 'boom' } },
+    });
+    assert.equal(sentMessages.at(-1).msg.msg_id, 'passive_30m');
+
+    // Past 50 min (55 min elapsed) -> omit msg_id
+    sentMessages.length = 0;
+    bridge.lastMsgId = 'expired_55m';
+    bridge.lastMsgTime = Date.now() - 55 * 60 * 1000;
+    bridge.assistantBuffers.set('sess-1', '过期后流式分片');
+    bridge.streamState.set('sess-1', { sent: 0, timer: null, sending: false });
+    await bridge.flushStreamChunk('user_target', 'sess-1');
+    assert.equal(sentMessages.at(-1).msg.msg_id, undefined);
+
+    await bridge.onDshAssistantMessage('user_target', 'sess-1', {
+      data: { message: { content: [{ type: 'text', text: '55分钟后回复' }] } },
+    });
+    assert.equal(sentMessages.at(-1).msg.msg_id, undefined);
+
+    await bridge.onDshTurnEnd('user_target', 'sess-1', {
+      data: { turn: 2, reason: { kind: 'error', message: 'boom2' } },
+    });
+    assert.equal(sentMessages.at(-1).msg.msg_id, undefined);
+
+    harness.bridge.stop();
+  });
+
+  it('should throttle sendTyping across rapid onDshToolCall events', async () => {
+    const harness = createTestHarness();
+    let typingCalls = 0;
+    harness.apiClient.sendTyping = async () => {
+      typingCalls += 1;
+      return true;
+    };
+
+    // Prompt sends initial typing indicator
+    harness.bridge.lastMsgId = 'msg_t1';
+    harness.bridge.lastMsgTime = Date.now();
+    await harness.bridge.handleUserPrompt('user_target', '开始执行', [], 'msg_t1');
+    assert.equal(typingCalls, 1);
+
+    // Back-to-back tool calls within 45s throttle window must not fire sendTyping
+    for (let i = 0; i < 10; i += 1) {
+      await harness.bridge.onDshToolCall('user_target', { data: { name: 'bash', turn: 1 } }, 'sess-1');
+    }
+    assert.equal(typingCalls, 1);
+
+    // After throttle expires, 10 back-to-back tool calls fire sendTyping at most once
+    harness.bridge.lastTypingTime = Date.now() - 46_000;
+    for (let i = 0; i < 10; i += 1) {
+      await harness.bridge.onDshToolCall('user_target', { data: { name: 'read', turn: 1 } }, 'sess-1');
+    }
+    assert.equal(typingCalls, 2);
+
+    harness.bridge.stop();
+  });
+
 });
