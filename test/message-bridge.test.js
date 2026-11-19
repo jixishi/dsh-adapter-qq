@@ -1204,4 +1204,28 @@ describe('MessageBridge', () => {
     harness.bridge.stop();
   });
 
+  it('should not call getSessionInfoById or sessionController.list for text-only handleUserPrompt', async () => {
+    const harness = createTestHarness();
+    let getInfoCalls = 0;
+    let listCalls = 0;
+    const origGetInfo = harness.bridge.sessionManager.getSessionInfoById;
+    harness.bridge.sessionManager.getSessionInfoById = async (...args) => {
+      getInfoCalls += 1;
+      return origGetInfo(...args);
+    };
+    harness.ctx.sessionController.list = async () => {
+      listCalls += 1;
+      return { items: [] };
+    };
+
+    const prompts = [];
+    harness.ctx.on('prompt_received', (req) => prompts.push(req));
+
+    await harness.bridge.handleUserPrompt('user_target', '纯文本消息', [], 'msg_text_only');
+    assert.equal(prompts.length, 1);
+    assert.equal(getInfoCalls, 0);
+    assert.equal(listCalls, 0);
+    harness.bridge.stop();
+  });
+
 });
